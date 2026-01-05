@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% import "macro.html" as macros %}
+
+{% block content %}
+<style>
+    /* Metallic Theme Variables */
+    :root {
+        --metal-dark: #1a1a1a;
+        --metal-surface: linear-gradient(145deg, #2d2d2d, #1a1a1a);
+        --metal-border: #404040;
+        --metal-text: #e0e0e0;
+        --metal-text-muted: #888;
+        --metal-highlight: #00bcd4; /* Cyan/Blue Neon */
+        --metal-input-bg: rgba(0, 0, 0, 0.3);
+    }
+
+    /* Container Spacing */
+    .container-fluid {
+        padding-top: 20px;
+    }
+
+    /* Headers */
+    h4 {
+        color: var(--metal-text);
+        font-weight: 300;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--metal-highlight);
+        display: inline-block;
+        padding-bottom: 5px;
+    }
+
+    /* Form Controls */
+    .form-control, .custom-select {
+        background-color: var(--metal-input-bg) !important;
+        border: 1px solid var(--metal-border) !important;
+        color: var(--metal-text) !important;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .custom-select:focus {
+        background-color: rgba(0,0,0,0.5) !important;
+        border-color: var(--metal-highlight) !important;
+        box-shadow: 0 0 10px rgba(0, 188, 212, 0.3) !important;
+    }
+
+    /* Buttons */
+    .btn-outline-primary {
+        color: var(--metal-highlight);
+        border-color: var(--metal-highlight);
+    }
+    .btn-outline-primary:hover {
+        background-color: var(--metal-highlight);
+        color: #000;
+        box-shadow: 0 0 15px var(--metal-highlight);
+    }
+
+    /* HR */
+    hr {
+        border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    /* Labels */
+    label, strong {
+        color: #cfcfcf;
+        font-weight: 500;
+    }
+    
+    /* Description text */
+    em {
+        color: var(--metal-text-muted);
+        font-style: normal;
+        font-size: 0.9em;
+    }
+</style>
+<div class="container-fluid">
+    {{ macros.m_row_start('5') }}
+    {{ macros.m_row_end() }}
+
+    <!-- Header & Save Button -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>GDM 설정</h4>
+        {{ macros.m_button_group([['globalSettingSaveBtn', '설정 저장']]) }}
+    </div>
+    {{ macros.m_hr_head_bottom() }}
+
+    <form id="setting">
+        <!-- Basic Setting -->
+        {{ macros.setting_top_big('기본 설정') }}
+        {{ macros.setting_bottom() }}
+        
+        {{ macros.setting_input_text('save_path', '저장 경로', value=arg['save_path'], desc='{PATH_DATA}는 실제 데이터 경로로 치환됩니다.') }}
+        {{ macros.setting_input_text('temp_path', '임시 경로', value=arg['temp_path'], desc='다운로드 중 임시 파일 저장 경로') }}
+        {{ macros.setting_input_text('max_concurrent', '동시 다운로드 수', value=arg['max_concurrent'], desc='동시에 진행할 최대 다운로드 수') }}
+        {{ macros.setting_select('max_download_rate', '속도 제한', [['0', '무제한'], ['1M', '1 MB/s'], ['3M', '3 MB/s'], ['5M', '5 MB/s'], ['10M', '10 MB/s']], value=arg['max_download_rate'], desc='다운로드 속도를 제한합니다.') }}
+
+        {{ macros.m_hr() }}
+
+        <!-- Downloader Setting -->
+        {{ macros.setting_top_big('다운로더 설정') }}
+        {{ macros.setting_bottom() }}
+        
+        {{ macros.setting_input_text('aria2c_path', 'aria2c 경로', value=arg['aria2c_path'], desc='aria2c 실행 파일 경로 (고속 다운로드용)') }}
+        {{ macros.setting_input_text('aria2c_connections', 'aria2c 연결 수', value=arg['aria2c_connections'], desc='aria2c 동시 연결 수 (기본 16)') }}
+        {{ macros.setting_input_text('ffmpeg_path', 'ffmpeg 경로', value=arg['ffmpeg_path'], desc='ffmpeg 실행 파일 경로 (HLS 스트림용)') }}
+        {{ macros.setting_input_text('yt_dlp_path', 'yt-dlp 경로', value=arg['yt_dlp_path'], desc='비워두면 Python 모듈 사용') }}
+
+        {{ macros.m_hr() }}
+
+        <!-- Retry Setting -->
+        {{ macros.setting_top_big('재시도 설정') }}
+        {{ macros.setting_bottom() }}
+        
+        {{ macros.setting_checkbox('auto_retry', '자동 재시도', value=arg['auto_retry'], desc='다운로드 실패 시 자동으로 재시도') }}
+        {{ macros.setting_input_text('max_retry', '최대 재시도 횟수', value=arg['max_retry'], desc='최대 재시도 횟수') }}
+        
+    </form>
+</div>
+{% endblock %}
+
+{% block tail_js %}
+<script type="text/javascript">
+    var package_name = "{{arg['package_name'] }}";
+    var sub = "{{arg['module_name'] }}"; // sub usually is module name like 'queue'
+
+    // Save Button Logic (Standard FlaskFarm Plugin JS)
+    // Note: globalSettingSaveBtn logic is usually handled by framework's default plugin.js if available,
+    // OR we explicitly define it here.
+    // Gommi plugin loads '/package_name/static/package_name.js' ?
+    // I recall checking step 21445 it had `<script src="/{{package_name}}/static/{{package_name}}.js"></script>`
+    // I will explicitly add the save logic just in case the static JS relies on specific form IDs.
+    
+    $(document).ready(function(){
+        // Nothing special needed
+    });
+
+    $("body").on('click', '#globalSettingSaveBtn', function(e){
+        e.preventDefault();
+        var formData = get_formdata('#setting');
+        $.ajax({
+            url: '/' + package_name + '/ajax/' + sub + '/setting_save',
+            type: "POST",
+            cache: false,
+            data: formData,
+            dataType: "json",
+            success: function(ret) {
+                if (ret.ret == 'success') {
+                    $.notify('설정을 저장했습니다.', {type:'success'});
+                } else {
+                    $.notify('저장 실패: ' + ret.msg, {type:'danger'});
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
