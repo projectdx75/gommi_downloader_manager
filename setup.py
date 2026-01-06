@@ -15,7 +15,7 @@ gommi_download_manager - FlaskFarm 범용 다운로더 큐 플러그인
 import traceback
 
 import os
-package_name = os.path.split(os.path.dirname(__file__))[-1]
+package_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 
 setting = {
     'filepath': __file__,

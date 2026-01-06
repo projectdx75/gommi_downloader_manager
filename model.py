@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 
 # 패키지 이름 동적 처리 (폴더명 기준)
-package_name = os.path.split(os.path.dirname(__file__))[-1]
+package_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
 
 class ModelDownloadItem(ModelBase):
     """다운로드 아이템 DB 모델"""
