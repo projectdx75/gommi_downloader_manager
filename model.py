@@ -4,6 +4,7 @@
 from plugin import ModelBase, db
 from framework import F
 import os
+from datetime import datetime
 
 # 패키지 이름 동적 처리 (폴더명 기준)
 package_name = os.path.split(os.path.dirname(__file__))[-1]
