@@ -8,21 +8,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-    /* Premium Modern Design System */
-    :root {
-        --bg-body: #0f172a;
-        --surface: rgba(30, 41, 59, 0.7);
-        --surface-opaque: #1e293b;
-        --border: rgba(255, 255, 255, 0.1);
-        --text-main: #f8fafc;
-        --text-muted: #94a3b8;
-        --accent-primary: #38bdf8; /* Sky Blue */
-        --accent-secondary: #818cf8; /* Indigo */
-        --success: #10b981;
-        --warning: #f59e0b;
-        --danger: #ef4444;
-        --glow: rgba(56, 189, 248, 0.3);
-        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* ========================================
+       GDM FORCED SUPERHERO THEME
+       (Overrides global FlaskFarm theme)
+       ======================================== */
+    
+    /* Superhero Color Palette - HARDCODED */
+    :root, #gommi_download_manager_queue_list, #gommi_download_manager_queue_list * {
+        --bg-body: #2b3e50 !important;
+        --surface: rgba(62, 88, 112, 0.9) !important;
+        --surface-opaque: #3e5870 !important;
+        --border: rgba(255, 255, 255, 0.15) !important;
+        --text-main: #ebebeb !important;
+        --text-muted: #abb6c2 !important;
+        --accent-primary: #4e9fd9 !important;
+        --accent-secondary: #5bc0de !important;
+        --success: #4ebf73 !important;
+        --warning: #f0ad4e !important;
+        --danger: #d9534f !important;
+        --glow: rgba(78, 159, 217, 0.4) !important;
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    }
+
+    /* Force background color on container */
+    #gommi_download_manager_queue_list {
+        background-color: var(--bg-body) !important;
+        color: var(--text-main) !important;
     }
 
     #loading { display: none !important; }
