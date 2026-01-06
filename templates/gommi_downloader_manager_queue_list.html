@@ -408,7 +408,7 @@
 
     function refreshList(silent) {
         $.ajax({
-            url: `/${{ arg['package_name'] }}/ajax/${{ arg['module_name'] }}/list`,
+            url: '/{{ arg['package_name'] }}/ajax/{{ arg['module_name'] }}/list',
             type: 'POST',
             dataType: 'json',
             data: {},
@@ -534,7 +534,7 @@
     
     function cancelDownload(id) {
         $.ajax({
-            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/cancel`,
+            url: '/{{ arg['package_name'] }}/ajax/{{ arg['module_name'] }}/cancel',
             type: 'POST',
             data: { id: id },
             dataType: 'json',
@@ -550,7 +550,7 @@
     function resetList() {
         if (!confirm('Are you sure you want to clear the entire queue?')) return;
         $.ajax({
-            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/reset`,
+            url: '/{{ arg['package_name'] }}/ajax/{{ arg['module_name'] }}/reset',
             type: 'POST',
             data: {},
             dataType: 'json',
@@ -566,7 +566,7 @@
     // Socket Init
     try {
         if (typeof io !== 'undefined') {
-            const socket = io.connect(`/${{ arg['package_name'] }}/queue`); 
+            const socket = io.connect('/{{ arg['package_name'] }}/queue'); 
             socket.on('download_status', function(data) {
                 updateDownloadCard(data);
             });
