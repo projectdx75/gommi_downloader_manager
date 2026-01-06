@@ -390,6 +390,71 @@
         margin-bottom: 1rem;
         opacity: 0.3;
     }
+
+    /* Expandable Detail Panel */
+    .dl-card {
+        cursor: pointer;
+    }
+
+    .dl-detail-panel {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, padding 0.3s ease-out, margin 0.3s ease-out;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        margin-top: 0;
+        padding: 0 1rem;
+    }
+
+    .dl-card.expanded .dl-detail-panel {
+        max-height: 300px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .dl-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 0.4rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.75rem;
+    }
+
+    .dl-detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .dl-detail-label {
+        color: var(--text-muted);
+        flex-shrink: 0;
+        margin-right: 1rem;
+    }
+
+    .dl-detail-value {
+        color: var(--text-main);
+        word-break: break-all;
+        text-align: right;
+        max-width: 70%;
+    }
+
+    .dl-detail-value.url {
+        font-family: monospace;
+        font-size: 0.65rem;
+        opacity: 0.8;
+    }
+
+    .dl-expand-hint {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        text-align: center;
+        margin-top: 0.5rem;
+        opacity: 0.6;
+    }
+
+    .dl-card.expanded .dl-expand-hint {
+        display: none;
+    }
 </style>
 
 <div id="gommi_download_manager_queue_list" class="mt-4">
@@ -476,8 +541,15 @@
             if (item.meta.episode) metaHtml += `<span class="badge badge-outline mr-1">${item.meta.episode}화</span>`;
         }
         
+        // Format times
+        const startTime = item.start_time || item.created_time || '-';
+        const endTime = item.end_time || item.completed_time || '-';
+        const filePath = item.save_path || item.filepath || '-';
+        const fileSize = item.file_size ? formatFileSize(item.file_size) : '-';
+        const downloadUrl = item.url || '-';
+        
         return `
-            <div class="dl-card" id="card_${item.id}">
+            <div class="dl-card" id="card_${item.id}" onclick="toggleCardDetail(this, event)">
                 <div class="dl-meta">
                     <span class="dl-id-badge">#${item.id.toString().split('_').pop()}</span>
                     <span class="dl-source-pill">${source.toUpperCase()}</span>
@@ -507,10 +579,33 @@
                     </div>
                     <div class="dl-actions">
                         ${status === 'downloading' || status === 'pending' || status === 'paused' ? 
-                            `<button class="btn-action-small cancel" title="Cancel Download" onclick="cancelDownload('${item.id}')">
+                            `<button class="btn-action-small cancel" title="Cancel Download" onclick="event.stopPropagation(); cancelDownload('${item.id}')">
                                 <i class="fa fa-stop"></i>
                             </button>` : ''
                         }
+                    </div>
+                </div>
+                <div class="dl-expand-hint"><i class="fa fa-chevron-down"></i> 클릭하여 상세 정보 보기</div>
+                <div class="dl-detail-panel">
+                    <div class="dl-detail-row">
+                        <span class="dl-detail-label">시작 시간</span>
+                        <span class="dl-detail-value">${startTime}</span>
+                    </div>
+                    <div class="dl-detail-row">
+                        <span class="dl-detail-label">종료 시간</span>
+                        <span class="dl-detail-value">${endTime}</span>
+                    </div>
+                    <div class="dl-detail-row">
+                        <span class="dl-detail-label">파일 크기</span>
+                        <span class="dl-detail-value">${fileSize}</span>
+                    </div>
+                    <div class="dl-detail-row">
+                        <span class="dl-detail-label">저장 경로</span>
+                        <span class="dl-detail-value">${filePath}</span>
+                    </div>
+                    <div class="dl-detail-row">
+                        <span class="dl-detail-label">URL</span>
+                        <span class="dl-detail-value url">${downloadUrl.length > 80 ? downloadUrl.substring(0, 80) + '...' : downloadUrl}</span>
                     </div>
                 </div>
             </div>
@@ -572,6 +667,21 @@
                 refreshList(true);
             }
         });
+    }
+
+    // Toggle card detail panel
+    function toggleCardDetail(card, event) {
+        // Don't toggle if clicking on action buttons
+        if (event.target.closest('.dl-actions')) return;
+        card.classList.toggle('expanded');
+    }
+
+    // Format file size to human readable
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '-';
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
     }
 
     // Socket Init
