@@ -520,6 +520,12 @@
         const container = document.getElementById('download_list');
         if (!container) return;
         
+        // Save expanded card IDs before re-rendering
+        const expandedIds = [];
+        container.querySelectorAll('.dl-card.expanded').forEach(function(card) {
+            expandedIds.push(card.id);
+        });
+        
         if (!items || items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -534,6 +540,12 @@
             html += createDownloadCard(item);
         });
         container.innerHTML = html;
+        
+        // Restore expanded state
+        expandedIds.forEach(function(cardId) {
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('expanded');
+        });
     }
     
     function createDownloadCard(item) {

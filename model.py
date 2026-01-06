@@ -57,6 +57,9 @@ class ModelDownloadItem(ModelBase):
                 ret['meta'] = {}
         else:
             ret['meta'] = {}
+        # Format created_time for frontend
+        if self.created_time:
+            ret['created_time'] = self.created_time.strftime('%Y-%m-%d %H:%M:%S')
         return ret
 
     @classmethod
