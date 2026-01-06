@@ -408,7 +408,7 @@
 
     function refreshList(silent) {
         $.ajax({
-            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/list`,
+            url: `/${{ arg['package_name'] }}/ajax/${{ arg['module_name'] }}/list`,
             type: 'POST',
             dataType: 'json',
             data: {},
@@ -566,7 +566,7 @@
     // Socket Init
     try {
         if (typeof io !== 'undefined') {
-            const socket = io.connect(`/${PACKAGE_NAME}/queue`); 
+            const socket = io.connect(`/${{ arg['package_name'] }}/queue`); 
             socket.on('download_status', function(data) {
                 updateDownloadCard(data);
             });
