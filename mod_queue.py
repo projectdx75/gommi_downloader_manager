@@ -284,6 +284,7 @@ class ModuleQueue(PluginModuleBase):
             # DB에서 진행 중인 작업 로드
             with F.app.app_context():
                 from .model import ModelDownloadItem
+                from datetime import datetime
                 ModelDownloadItem.P = self.P
                 ModelDownloadItem.check_migration()
                 
