@@ -53,6 +53,13 @@ from plugin import *
 P = create_plugin_instance(setting)
 
 try:
+    import flask
+    from flask import Blueprint
+    from .model import ModelSetting, ModelDownloadItem
+except ImportError:
+    pass
+
+try:
     from .mod_queue import ModuleQueue
     P.set_module_list([ModuleQueue])
 except Exception as e:
