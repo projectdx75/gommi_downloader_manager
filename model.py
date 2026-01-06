@@ -3,8 +3,9 @@
 """
 from plugin import ModelBase, db
 from framework import F
+import os
 
-package_name = 'gommi_download_manager'
+package_name = os.path.split(os.path.dirname(__file__))[-1]
 
 
 from datetime import datetime

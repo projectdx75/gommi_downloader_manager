@@ -12,7 +12,7 @@ from enum import Enum
 from flask import render_template, jsonify
 from framework import F, socketio
 
-from framework import F, socketio
+
 
 
 class DownloadStatus(str, Enum):
