@@ -46,9 +46,11 @@ class YtdlpAria2Downloader(BaseDownloader):
                 output_template = os.path.join(save_path, '%(title)s.%(ext)s')
             
             # yt-dlp 명령어 구성
+            # 기본 명령어 구성 (항상 verbose 로그 남기도록 수정)
             cmd = [
                 'yt-dlp',
                 '--newline',  # 진행률 파싱용
+                '--no-check-certificate',
                 '-o', output_template,
             ]
             
@@ -76,12 +78,18 @@ class YtdlpAria2Downloader(BaseDownloader):
                 logger.debug(f'aria2c 사용: {connections}개 연결 (속도제한 {log_rate_msg})')
             
             # 포맷 선택
-            format_spec = options.get('format', 'bestvideo+bestaudio/best')
+            format_spec = options.get('format')
+            if not format_spec:
+                if options.get('extract_audio'):
+                    format_spec = 'bestaudio/best'
+                else:
+                    format_spec = 'bestvideo+bestaudio/best'
             cmd.extend(['-f', format_spec])
             
-            # 병합 포맷
-            merge_format = options.get('merge_output_format', 'mp4')
-            cmd.extend(['--merge-output-format', merge_format])
+            # 병합 포맷 (비디오인 경우에만)
+            if not options.get('extract_audio'):
+                merge_format = options.get('merge_output_format', 'mp4')
+                cmd.extend(['--merge-output-format', merge_format])
             
             # 쿠키 파일
             if options.get('cookiefile'):
@@ -90,11 +98,54 @@ class YtdlpAria2Downloader(BaseDownloader):
             # 프록시
             if options.get('proxy'):
                 cmd.extend(['--proxy', options['proxy']])
+
+            # FFmpeg 경로 자동 감지 및 설정
+            ffmpeg_path = options.get('ffmpeg_path') or P.ModelSetting.get('ffmpeg_path')
+            
+            # 경로가 비어있거나 'ffmpeg' 같은 단순 이름인 경우 자동 감지 시도
+            if not ffmpeg_path or ffmpeg_path == 'ffmpeg':
+                import shutil
+                detected_path = shutil.which('ffmpeg')
+                if detected_path:
+                    ffmpeg_path = detected_path
+                else:
+                    # Mac Homebrew 등 일반적인 경로 추가 탐색
+                    common_paths = [
+                        '/opt/homebrew/bin/ffmpeg',
+                        '/usr/local/bin/ffmpeg',
+                        '/usr/bin/ffmpeg'
+                    ]
+                    for p in common_paths:
+                        if os.path.exists(p):
+                            ffmpeg_path = p
+                            break
+            
+            if ffmpeg_path:
+                # 파일 경로인 경우 폴더 경로로 변환하거나 그대로 사용 (yt-dlp는 둘 다 지원)
+                cmd.extend(['--ffmpeg-location', ffmpeg_path])
+                logger.debug(f'[GDM] 감지된 FFmpeg 경로: {ffmpeg_path}')
+
+            # 추가 인자 (extra_args: list)
+            extra_args = options.get('extra_args', [])
+            if isinstance(extra_args, list):
+                cmd.extend(extra_args)
+            
+            # 후처리 옵션 간편 지원 (예: {'extract_audio': True, 'audio_format': 'mp3'})
+            if options.get('extract_audio'):
+                cmd.append('--extract-audio')
+                if options.get('audio_format'):
+                    cmd.extend(['--audio-format', options['audio_format']])
+            
+            if options.get('embed_thumbnail'):
+                cmd.append('--embed-thumbnail')
+            
+            if options.get('add_metadata'):
+                cmd.append('--add-metadata')
             
             # URL 추가
             cmd.append(url)
             
-            logger.debug(f'yt-dlp 명령어: {" ".join(cmd)}')
+            logger.info(f'[GDM] yt-dlp command: {" ".join(cmd)}')
             
             # 프로세스 실행
             self._process = subprocess.Popen(
@@ -106,6 +157,7 @@ class YtdlpAria2Downloader(BaseDownloader):
             )
             
             final_filepath = ''
+            last_logged_pct = -1
             
             # 출력 파싱
             for line in self._process.stdout:
@@ -114,23 +166,34 @@ class YtdlpAria2Downloader(BaseDownloader):
                     return {'success': False, 'error': 'Cancelled'}
                 
                 line = line.strip()
-                # logger.debug(line)
+                if not line:
+                    continue
                 
                 # 진행률 파싱 (yt-dlp default)
                 progress_match = re.search(r'\[download\]\s+(\d+\.?\d*)%', line)
                 
+                # 로그 출력 여부 결정 (진행률은 5% 단위로만)
+                should_log = True
+                if progress_match:
+                    pct = float(progress_match.group(1))
+                    if int(pct) >= last_logged_pct + 5 or pct >= 99.9:
+                        last_logged_pct = int(pct)
+                    else:
+                        should_log = False
+                
+                if should_log:
+                    logger.info(f'[GDM][yt-dlp] {line}')
+                
                 # 진행률 파싱 (aria2c)
                 if not progress_match:
-                    # logger.error(f'DEBUG LINE: {line}') # Log raw line to debug
-                    aria2_match = re.search(r'\(\s*([\d.]+)%\)', line) # Allow spaces ( 7%)
-                    if aria2_match and (('DL:' in line) or ('CN:' in line)): # DL or CN must be present
+                    # aria2c match
+                    aria2_match = re.search(r'\(\s*([\d.]+)%\)', line)
+                    if aria2_match and (('DL:' in line) or ('CN:' in line)):
                         try:
                             progress = int(float(aria2_match.group(1)))
-                            # logger.error(f'MATCHED PROGRESS: {progress}%')
                             
                             speed_match = re.search(r'DL:(\S+)', line)
                             speed = speed_match.group(1) if speed_match else ''
-                            # Strip color codes from speed if needed? output is usually clean text if no TTY
                             
                             eta_match = re.search(r'ETA:(\S+)', line)
                             eta = eta_match.group(1) if eta_match else ''
@@ -158,11 +221,14 @@ class YtdlpAria2Downloader(BaseDownloader):
                     
                     progress_callback(progress, speed, eta)
                 
-                # 최종 파일 경로 추출
-                if '[Merger]' in line or 'Destination:' in line:
-                    path_match = re.search(r'(?:Destination:|into\s+["\'])(.+?)(?:["\']|$)', line)
+                # 최종 파일 경로 추출 (Merger, VideoConvertor, Destination 모두 대응)
+                if any(x in line for x in ['[Merger]', '[VideoConvertor]', 'Destination:']):
+                    path_match = re.search(r'(?:Destination:|into|to)\s+["\']?(.+?)(?:["\']|$)', line)
                     if path_match:
-                        final_filepath = path_match.group(1).strip('"\'')
+                        potential_path = path_match.group(1).strip('"\'')
+                        # 확장자가 있는 경우만 파일 경로로 간주
+                        if '.' in os.path.basename(potential_path):
+                            final_filepath = potential_path
             
             self._process.wait()
             

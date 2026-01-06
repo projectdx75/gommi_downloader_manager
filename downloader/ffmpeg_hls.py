@@ -51,10 +51,35 @@ class FfmpegHlsDownloader(BaseDownloader):
             
             # 헤더 추가
             headers = options.get('headers', {})
-            if headers:
-                header_str = '\r\n'.join([f'{k}: {v}' for k, v in headers.items()])
-                cmd.extend(['-headers', header_str])
+            cookies_file = options.get('cookies_file')
             
+            if headers:
+                header_str = '\r\n'.join([f'{k}: {v}' for k, v in headers.items() if v is not None])
+                if header_str:
+                    cmd.extend(['-headers', header_str])
+            
+            if cookies_file and os.path.exists(cookies_file):
+                # FFmpeg basically uses custom headers for cookies if not using a library that supports it
+                # or we can pass it as a header
+                if 'Cookie' not in headers:
+                    try:
+                        with open(cookies_file, 'r') as f:
+                            cookie_lines = []
+                            for line in f:
+                                if line.startswith('#') or not line.strip(): continue
+                                parts = line.strip().split('\t')
+                                if len(parts) >= 7:
+                                    cookie_lines.append(f"{parts[5]}={parts[6]}")
+                            if cookie_lines:
+                                cookie_str = '; '.join(cookie_lines)
+                                if headers:
+                                    header_str += f'\r\nCookie: {cookie_str}'
+                                    cmd[-1] = header_str # Update headers
+                                else:
+                                    cmd.extend(['-headers', f'Cookie: {cookie_str}'])
+                    except Exception as ce:
+                        logger.error(f"Failed to read cookies_file: {ce}")
+
             # 입력 URL
             cmd.extend(['-i', url])
             
@@ -64,7 +89,7 @@ class FfmpegHlsDownloader(BaseDownloader):
             # 출력 파일
             cmd.append(filepath)
             
-            logger.debug(f'ffmpeg 명령어: {" ".join(cmd[:10])}...')
+            logger.debug(f'ffmpeg 명령어: {" ".join(cmd[:15])}...')
             
             # 먼저 duration 얻기 위해 ffprobe 실행
             duration = self._get_duration(url, options.get('ffprobe_path', 'ffprobe'), headers)
@@ -78,13 +103,17 @@ class FfmpegHlsDownloader(BaseDownloader):
                 bufsize=1
             )
             
-            # 출력 파싱
+            # 출력 파싱 및 에러 메시지 캡처를 위한 변수
+            last_lines = []
             for line in self._process.stdout:
                 if self._cancelled:
                     self._process.terminate()
                     return {'success': False, 'error': 'Cancelled'}
                 
                 line = line.strip()
+                if line:
+                    last_lines.append(line)
+                    if len(last_lines) > 20: last_lines.pop(0)
                 
                 # 진행률 계산 (time= 파싱)
                 if duration > 0 and progress_callback:
@@ -109,7 +138,9 @@ class FfmpegHlsDownloader(BaseDownloader):
                     progress_callback(100, '', '')
                 return {'success': True, 'filepath': filepath}
             else:
-                return {'success': False, 'error': f'FFmpeg exit code: {self._process.returncode}'}
+                error_log = "\n".join(last_lines)
+                logger.error(f"FFmpeg failed with return code {self._process.returncode}. Last output:\n{error_log}")
+                return {'success': False, 'error': f'FFmpeg Error({self._process.returncode}): {last_lines[-1] if last_lines else "Unknown"}'}
                 
         except Exception as e:
             logger.error(f'FfmpegHls download error: {e}')

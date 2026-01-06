@@ -2,6 +2,7 @@
 다운로드 큐 모델 정의
 """
 from plugin import ModelBase, db
+from framework import F
 
 package_name = 'gommi_download_manager'
 
@@ -42,4 +43,45 @@ class ModelDownloadItem(ModelBase):
     # 에러 정보
     error_message: str = db.Column(db.Text)
     retry_count: int = db.Column(db.Integer, default=0)
+    
+    # 추가 메타데이터 (JSON 형태의 텍스트 저장)
+    meta: str = db.Column(db.Text)
+
+    def as_dict(self):
+        ret = super(ModelDownloadItem, self).as_dict()
+        import json
+        if self.meta:
+            try:
+                ret['meta'] = json.loads(self.meta)
+            except:
+                ret['meta'] = {}
+        else:
+            ret['meta'] = {}
+        return ret
+
+    @classmethod
+    def check_migration(cls):
+        """DB 컬럼 누락 체크 및 추가"""
+        try:
+            from .setup import P
+            import sqlite3
+            db_file = F.app.config['SQLALCHEMY_BINDS'][package_name].replace('sqlite:///', '').split('?')[0]
+            conn = sqlite3.connect(db_file)
+            cursor = conn.cursor()
+            
+            # meta 컬럼 확인
+            cursor.execute(f"PRAGMA table_info({cls.__tablename__})")
+            columns = [info[1] for info in cursor.fetchall()]
+            
+            if 'meta' not in columns:
+                P.logger.info(f"Adding 'meta' column to {cls.__tablename__}")
+                cursor.execute(f"ALTER TABLE {cls.__tablename__} ADD COLUMN meta TEXT")
+                conn.commit()
+            
+            conn.close()
+        except Exception as e:
+            from .setup import P
+            P.logger.error(f"Migration Error: {e}")
+            import traceback
+            P.logger.error(traceback.format_exc())
 

@@ -2,281 +2,563 @@
 {% import "macro.html" as macros %}
 
 {% block content %}
+<!-- Google Fonts: Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-    /* 이 페이지에서만 전역 로딩 인디케이터 숨김 */
+    /* Premium Modern Design System */
+    :root {
+        --bg-body: #0f172a;
+        --surface: rgba(30, 41, 59, 0.7);
+        --surface-opaque: #1e293b;
+        --border: rgba(255, 255, 255, 0.1);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent-primary: #38bdf8; /* Sky Blue */
+        --accent-secondary: #818cf8; /* Indigo */
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --glow: rgba(56, 189, 248, 0.3);
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
     #loading { display: none !important; }
 
-    /* Metallic Theme Variables */
-    :root {
-        --metal-dark: #1a1a1a;
-        --metal-surface: linear-gradient(145deg, #2d2d2d, #1a1a1a);
-        --metal-border: #404040;
-        --metal-text: #e0e0e0;
-        --metal-text-muted: #888;
-        --metal-highlight: #00bcd4; /* Cyan/Blue Neon */
-        --metal-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    #gommi_download_manager_queue_list {
+        font-family: var(--font-sans);
+        color: var(--text-main);
+        background-color: transparent;
+        padding-bottom: 2rem;
     }
 
-    /* Card Override */
-    .card {
-        background: var(--metal-surface) !important;
-        border: 1px solid var(--metal-border) !important;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-        color: var(--metal-text);
-    }
-    
-    .card-header {
-        background: rgba(0,0,0,0.2) !important;
-        border-bottom: 1px solid var(--metal-border) !important;
-        color: var(--metal-text);
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+    /* Header Styling */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    /* Table Override */
-    .table {
-        color: var(--metal-text) !important;
-    }
-    .table thead th {
-        border-top: none;
-        border-bottom: 2px solid var(--metal-border);
-        color: var(--metal-text-muted);
-        font-size: 0.85rem;
-    }
-    .table td {
-        border-top: 1px solid rgba(255,255,255,0.05);
-        vertical-align: middle;
-    }
-    .table-striped tbody tr:nth-of-type(odd) {
-        background-color: rgba(255,255,255,0.02) !important;
-    }
-    .table-hover tbody tr:hover {
-        background-color: rgba(255,255,255,0.05) !important;
+    /* Redesigned Navigation Menu (tabs) */
+    #menu_page_div .nav-pills {
+        margin-top: 2px !important;
+        margin-bottom: 12px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px !important;
+        padding: 6px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+        display: inline-flex !important;
+        width: auto !important;
     }
 
-    /* Buttons */
-    .btn-outline-primary {
-        color: var(--metal-highlight);
-        border-color: var(--metal-highlight);
+    /* Global Navigation Spacing Adjustments (Fix for extra gap) */
+    #menu_module_div {
+        padding-top: 0 !important;
     }
-    .btn-outline-primary:hover {
-        background-color: var(--metal-highlight);
-        color: #000;
-        box-shadow: 0 0 10px var(--metal-highlight);
+    #menu_module_div .nav-pills {
+        margin-top: 0 !important;
+        margin-bottom: 5px !important;
     }
-    .btn-outline-danger {
-        color: #ff5252;
-        border-color: #ff5252;
+    @media (min-width: 769px) {
+        #main_container {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
     }
-    .btn-outline-danger:hover {
-        background-color: #ff5252;
-        color: white;
-        box-shadow: 0 0 10px #ff5252;
-    }
-
-    /* Badges */
-    .badge {
-        font-weight: 500;
-        letter-spacing: 0.5px;
-    }
-    .badge-outline-secondary {
-        border: 1px solid #666;
-        color: #aaa;
-        background: transparent;
-    }
-    .badge-outline-info {
-        border: 1px solid var(--metal-highlight);
-        color: var(--metal-highlight);
-        background: transparent;
+    /* Navigation Override (SJVA Menu Page) */
+    #menu_page_div {
+        margin-bottom: 2rem;
     }
 
-    /* Progress Bar */
-    .progress {
-        background-color: rgba(0,0,0,0.5);
-        border: 1px solid #333;
+    #menu_page_div .nav-pills {
+        background: rgba(30, 41, 59, 0.5) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 6px;
+        display: inline-flex;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    #menu_page_div .nav-link {
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.6rem 1.25rem;
         border-radius: 10px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+    }
+
+    #menu_page_div .nav-link:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    #menu_page_div .nav-link.active {
+        background: white !important;
+        color: #0f172a !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 576px) {
+        #menu_page_div .nav-pills {
+            display: flex;
+            width: 100%;
+        }
+        #menu_page_div .nav-link {
+            flex: 1;
+            text-align: center;
+            padding: 0.6rem 0.5rem;
+        }
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    /* Primary Modern Button */
+    .btn-premium {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-main);
+        backdrop-filter: blur(8px);
+    }
+
+    .btn-premium:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .btn-premium.danger:hover {
+        background: rgba(239, 68, 68, 0.2) !important;
+        border-color: var(--danger);
+        color: var(--danger);
+    }
+
+    .btn-premium i {
+        margin-right: 0.5rem;
+    }
+
+    /* Card List Layout */
+    .download-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.25rem;
+    }
+
+    @media (max-width: 576px) {
+        .download-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Download Card Styling */
+    .dl-card {
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        transition: all 0.3s ease;
+        position: relative;
         overflow: hidden;
     }
-    .progress-bar {
-        background: linear-gradient(90deg, #00acc1, #26c6da);
-        box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
-        font-size: 0.8rem;
-        line-height: 20px;
+
+    .dl-card:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(30, 41, 59, 0.85);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ID & Meta Row */
+    .dl-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .dl-id-badge {
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .dl-source-pill {
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent-primary);
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    /* Title Section */
+    .dl-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .dl-title {
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-all;
+    }
+
+    .dl-url {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        opacity: 0.6;
+    }
+
+    /* Progress Section */
+    .dl-progress-container {
+        margin-top: 0.5rem;
+    }
+
+    .dl-progress-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .dl-speed {
+        color: var(--text-muted);
+    }
+
+    .dl-progress-bar-bg {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .dl-progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        width: 0%;
+        transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 99px;
+        box-shadow: 0 0 12px var(--glow);
+    }
+
+    /* Status & Controls */
+    .dl-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+    }
+
+    .dl-status-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    /* Status Colors */
+    .status-pending { color: var(--text-muted); }
+    .status-pending .status-dot { background-color: var(--text-muted); opacity: 0.5; }
+    
+    .status-downloading { color: var(--accent-primary); }
+    .status-downloading .status-dot { background-color: var(--accent-primary); box-shadow: 0 0 8px var(--accent-primary); animation: pulse 1.5s infinite; }
+    
+    .status-completed { color: var(--success); }
+    .status-completed .status-dot { background-color: var(--success); }
+    
+    .status-error { color: var(--danger); }
+    .status-error .status-dot { background-color: var(--danger); }
+
+    .dl-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-action-small {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .btn-action-small:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: scale(1.05);
+    }
+
+    .btn-action-small.cancel:hover {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+        border-color: var(--danger);
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(1.2); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Empty State */
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--surface);
+        border-radius: 16px;
+        border: 1px dashed var(--border);
+        color: var(--text-muted);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
     }
 </style>
+
 <div id="gommi_download_manager_queue_list" class="mt-4">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">다운로드 목록</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-outline-danger mr-2" onclick="resetList()">
-                    <i class="fa fa-trash"></i> 전체 삭제
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary" onclick="refreshList()">
-                    <i class="fa fa-refresh"></i> 새로고침
-                </button>
-            </div>
+    <div class="page-header">
+        <h1 class="page-title">GDM Queue</h1>
+        <div class="header-actions">
+            <button type="button" class="btn-premium danger" onclick="resetList()">
+                <i class="fa fa-trash"></i> Reset All
+            </button>
+            <button type="button" class="btn-premium" onclick="refreshList()">
+                <i class="fa fa-refresh"></i> Refresh
+            </button>
         </div>
-        <div class="card-body p-0">
-            <table class="table table-striped table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th style="width: 5%">#</th>
-                        <th style="width: 10%">요청</th>
-                        <th style="width: 35%">제목/URL</th>
-                        <th style="width: 10%">소스</th>
-                        <th style="width: 15%">진행률</th>
-                        <th style="width: 10%">속도</th>
-                        <th style="width: 10%">상태</th>
-                        <th style="width: 15%">작업</th>
-                    </tr>
-                </thead>
-                <tbody id="download_list">
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            다운로드 항목이 없습니다.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    </div>
+
+    <div class="download-grid" id="download_list">
+        <!-- List will be rendered here -->
+        <div class="empty-state">
+            <i class="fa fa-cloud-download"></i>
+            <p>No downloads in queue.</p>
         </div>
     </div>
 </div>
-<script src="/{{arg.package_name}}/static/{{arg.package_name}}.js"></script>
+
 <script>
-    console.log("Start Gommi Queue List JS");
-    // alert("Check: JS Running");
-    
-    // Functions first
+    // PACKAGE_NAME and MODULE_NAME are already defined globally by framework
+
     function refreshList(silent) {
-        // Try multiple URLs to find the correct one
-        var attempts = [
-            '/{{arg.package_name}}/ajax/{{arg.module_name}}/list',          // New Candidate
-            '/{{arg.package_name}}/{{arg.module_name}}/ajax/list',          // Standard
-            '/{{arg.package_name}}/{{arg.module_name}}/queue/ajax/list',    // Double Queue
-            '/{{arg.package_name}}/queue/ajax/list'                         // Direct Queue
-        ];
-        
-        function tryUrl(index) {
-            if (index >= attempts.length) {
-                console.error("All list fetch attempts failed");
-                return;
-            }
-            
-            var url = attempts[index];
-            $.ajax({
-                url: url,
-                type: 'POST',
-                dataType: 'json',
-                data: {},
-                global: !silent,  // Silent mode: suppress global loading indicator
-                success: function(ret) {
-                    if (ret.ret === 'success') {
-                        renderList(ret.data || []);
-                    } else {
-                        // tryUrl(index + 1);
-                    }
-                },
-                error: function(e) {
-                     // console.warn("Failed URL:", url);
-                     tryUrl(index + 1);
+        $.ajax({
+            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/list`,
+            type: 'POST',
+            dataType: 'json',
+            data: {},
+            global: !silent,
+            success: function(ret) {
+                if (ret.ret === 'success') {
+                    renderList(ret.data || []);
                 }
-            });
-        }
-        
-        tryUrl(0);
+            },
+            error: function(e) {
+                // Fallback for different URL patterns if needed
+                $.ajax({
+                    url: `/${PACKAGE_NAME}/${MODULE_NAME}/ajax/list`,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(ret) { if (ret.ret === 'success') renderList(ret.data || []); }
+                });
+            }
+        });
     }
 
     function renderList(items) {
-        var tbody = document.getElementById('download_list');
-        if (!tbody) return;
+        const container = document.getElementById('download_list');
+        if (!container) return;
         
         if (!items || items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">다운로드 항목이 없습니다.</td></tr>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa fa-cloud-download"></i>
+                    <p>No downloads in queue.</p>
+                </div>`;
             return;
         }
         
-        var html = '';
-        items.forEach(function(item, index) {
-            html += createDownloadRow(item, index + 1);
+        let html = '';
+        items.forEach(function(item) {
+            html += createDownloadCard(item);
         });
-        tbody.innerHTML = html;
+        container.innerHTML = html;
     }
     
-    function createDownloadRow(item, num) {
-        var statusClass = {
-            'pending': 'badge-secondary',
-            'extracting': 'badge-info',
-            'downloading': 'badge-primary',
-            'completed': 'badge-success',
-            'error': 'badge-danger',
-            'cancelled': 'badge-warning',
-            'paused': 'badge-warning'
-        };
+    function createDownloadCard(item) {
+        const percent = (item.progress && !isNaN(item.progress)) ? item.progress : 0;
+        const displayTitle = item.title || item.filename || item.url || 'No Title';
+        const source = item.source_type || 'auto';
+        const status = item.status || 'pending';
+        const thumbnail = item.thumbnail || '';
         
-        var percent = (item.progress && !isNaN(item.progress)) ? item.progress : 0;
-        var displayTitle = item.title ? item.title : (item.url || 'No Title');
-        if (displayTitle.length > 50) displayTitle = displayTitle.substring(0, 50) + '...';
+        let statusClass = `status-${status}`;
+        let metaHtml = '';
+        if (item.meta) {
+            if (item.meta.series) metaHtml += `<span class="badge badge-outline mr-1">${item.meta.series}</span>`;
+            if (item.meta.season) metaHtml += `<span class="badge badge-outline mr-1">${item.meta.season}기</span>`;
+            if (item.meta.episode) metaHtml += `<span class="badge badge-outline mr-1">${item.meta.episode}화</span>`;
+        }
         
-        return '<tr id="row_' + item.id + '">' +
-            '<td>' + num + '</td>' +
-            '<td><span class="badge badge-outline-secondary">' + (item.caller_plugin || 'User') + '</span></td>' +
-            '<td title="' + (item.url || '') + '">' + 
-                '<div style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + displayTitle + '</div>' + 
-            '</td>' +
-            '<td><span class="badge badge-outline-info">' + (item.source_type || 'auto') + '</span></td>' +
-            '<td>' +
-                '<div class="progress" style="height: 20px;">' +
-                    '<div class="progress-bar" role="progressbar" style="width: ' + percent + '%;" aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100">' + percent + '%</div>' +
-                '</div>' +
-            '</td>' +
-            '<td>' + (item.speed || '-') + '</td>' +
-            '<td><span class="badge ' + (statusClass[item.status] || 'badge-secondary') + '">' + (item.status || 'unknown') + '</span></td>' +
-            '<td>' +
-                (item.status === 'downloading' ? '<button class="btn btn-sm btn-warning" onclick="cancelDownload(\'' + item.id + '\')"><i class="fa fa-stop"></i></button>' : '') +
-            '</td>' +
-        '</tr>';
+        return `
+            <div class="dl-card" id="card_${item.id}">
+                <div class="dl-meta">
+                    <span class="dl-id-badge">#${item.id.toString().split('_').pop()}</span>
+                    <span class="dl-source-pill">${source.toUpperCase()}</span>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                    ${thumbnail ? `<img src="${thumbnail}" style="width: 80px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);" onerror="this.style.display='none'">` : ''}
+                    <div class="dl-info" style="flex: 1; min-width: 0;">
+                        <div class="dl-title" title="${displayTitle}">${displayTitle}</div>
+                        <div class="mt-2" style="font-size: 0.7rem; display: flex; flex-wrap: wrap; gap: 4px;">
+                            ${metaHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="dl-progress-container">
+                    <div class="dl-progress-header">
+                        <span class="dl-percent">${percent}%</span>
+                        <span class="dl-speed">${item.speed || ''}</span>
+                    </div>
+                    <div class="dl-progress-bar-bg">
+                        <div class="dl-progress-bar-fill" style="width: ${percent}%;"></div>
+                    </div>
+                </div>
+                <div class="dl-footer">
+                    <div class="dl-status-label ${statusClass}">
+                        <div class="status-dot"></div>
+                        <span>${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                    </div>
+                    <div class="dl-actions">
+                        ${status === 'downloading' || status === 'pending' || status === 'paused' ? 
+                            `<button class="btn-action-small cancel" title="Cancel Download" onclick="cancelDownload('${item.id}')">
+                                <i class="fa fa-stop"></i>
+                            </button>` : ''
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
     }
     
-    function updateDownloadRow(item) {
-        var row = document.getElementById('row_' + item.id);
-        if (row) {
-            row.outerHTML = createDownloadRow(item, row.rowIndex);
+    function updateDownloadCard(item) {
+        const card = document.getElementById('card_' + item.id);
+        if (card) {
+            // Smoothly update progress bar and stats without re-rendering entire card
+            const percentageText = card.querySelector('.dl-percent');
+            const progressBar = card.querySelector('.dl-progress-bar-fill');
+            const speedText = card.querySelector('.dl-speed');
+            const statusLabel = card.querySelector('.dl-status-label span');
+            const statusDot = card.querySelector('.dl-status-label');
+            
+            const percent = (item.progress && !isNaN(item.progress)) ? item.progress : 0;
+            
+            if (percentageText) percentageText.innerText = `${percent}%`;
+            if (progressBar) progressBar.style.width = `${percent}%`;
+            if (speedText) speedText.innerText = item.speed || '';
+            
+            // If status changed, full replace might be easier to handle state animation
+            if (statusLabel && statusLabel.innerText.toLowerCase() !== item.status) {
+                 const newContent = createDownloadCard(item);
+                 card.outerHTML = newContent;
+            }
         } else {
-            refreshList();
+            refreshList(true);
         }
     }
     
     function cancelDownload(id) {
         $.ajax({
-            url: '/{{arg.package_name}}/ajax/{{arg.module_name}}/cancel',  // Use new pattern
+            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/cancel`,
             type: 'POST',
             data: { id: id },
             dataType: 'json',
             success: function(ret) {
-                if (ret.msg) {
-                    $.notify('<strong>' + ret.msg + '</strong>', {type: 'success'});
+                if (ret.ret === 'success') {
+                    $.notify('<strong>Download Cancelled</strong>', {type: 'success'});
+                    refreshList(true);
                 }
             }
         });
     }
 
     function resetList() {
-        if (!confirm('정말 전체 목록을 삭제하시겠습니까? (진행 중인 작업도 취소됩니다)')) {
-            return;
-        }
+        if (!confirm('Are you sure you want to clear the entire queue?')) return;
         $.ajax({
-            url: '/{{arg.package_name}}/ajax/{{arg.module_name}}/reset',
+            url: `/${PACKAGE_NAME}/ajax/${MODULE_NAME}/reset`,
             type: 'POST',
             data: {},
             dataType: 'json',
             success: function(ret) {
-                if (ret.msg) {
-                    $.notify('<strong>' + ret.msg + '</strong>', {type: 'success'});
+                if (ret.ret === 'success') {
+                    $.notify('<strong>Queue Reset Successfully</strong>', {type: 'success'});
                 }
-                refreshList();
+                refreshList(true);
             }
         });
     }
@@ -284,33 +566,20 @@
     // Socket Init
     try {
         if (typeof io !== 'undefined') {
-            // Namespace needs to match default_route_socketio_module attach param
-            var socket = io.connect('/' + '{{ arg.package_name }}' + '/queue'); 
+            const socket = io.connect(`/${PACKAGE_NAME}/queue`); 
             socket.on('download_status', function(data) {
-                updateDownloadRow(data);
-            });
-            
-            socket.on('connect', function() {
-                console.log('Socket connected!');
+                updateDownloadCard(data);
             });
         }
     } catch (e) {
         console.error('Socket.IO init error:', e);
     }
     
-    // Initial Load
     $(document).ready(function() {
-        console.log("OnReady: Refresh List");
         refreshList();
-        
-        // Auto Refresh logic (fallback for Socket.IO)
         setInterval(function() {
-            // refreshList(); // 전체 갱신 보다는 상태만 가져오는게 좋지만, 일단 전체 갱신
-            // 조용히 갱신 (Optional: modify refreshList to accept silent flag)
-            
-            // 단순하게 목록 갱신 호출
-             refreshList(true); // Silent mode
-        }, 5000); // 5초마다
+            refreshList(true); 
+        }, 8000); 
     });
 </script>
 {% endblock %}

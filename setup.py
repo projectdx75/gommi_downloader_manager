@@ -21,7 +21,7 @@ setting = {
     'home_module': 'queue',
     'menu': {
         'uri': __package__,
-        'name': 'Gommi 다운로더',
+        'name': 'GDM',
         'list': [
             {
                 'uri': 'queue',

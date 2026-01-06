@@ -1,12 +1,24 @@
 # gommi_download_manager (GDM)
 
-FlaskFarm 범용 다운로더 큐 플러그인 (v0.1.0)
+FlaskFarm 범용 다운로더 큐 플러그인 (v0.2.0)
 
-## 🆕 0.1.0 업데이트 (Latest)
-- **다운로드 속도 제한**: 설정 페이지에서 대역폭 제한 설정 가능 (무제한, 1MB/s, 5MB/s...)
-- **UI 리뉴얼**: 고급스러운 Dark Metallic 디자인 & 반응형 웹 지원
-- **안정성 강화**: 서버 재시작 시 대기 중인 다운로드 상태 복원 (Queue Persistence)
-- **목록 관리**: 전체 삭제 및 자동 목록 갱신 기능 (Flickr-free)
+## 🆕 0.2.0 업데이트 (2026-01-06)
+
+### 새 기능
+- **플러그인 콜백 시스템**: 다운로드 완료 시 호출 플러그인에 상태 알림
+- **외부 플러그인 통합 강화**: `caller_plugin`, `callback_id` 파라미터로 호출자 추적
+- **HLS ffmpeg 헤더 수정**: None 값 필터링으로 에러 방지
+
+### 버그 수정
+- PluginManager API 호환성 수정 (`F.plugin_instance_list` → `F.PluginManager.all_package_list`)
+- 완료된 다운로드 진행률 100% 표시 수정
+- 큐 목록 URL 표시 제거 (깔끔한 UI)
+
+### UI 개선
+- 다크 메탈릭 디자인 유지
+- 완료 상태 표시 개선
+
+---
 
 ## 주요 기능
 
@@ -20,14 +32,27 @@ FlaskFarm 범용 다운로더 큐 플러그인 (v0.1.0)
 ```python
 from gommi_download_manager.mod_queue import ModuleQueue
 
-# 다운로드 추가 (속도 제한은 사용자가 설정한 값 자동 적용)
+# 다운로드 추가 (콜백 지원)
 task = ModuleQueue.add_download(
     url='https://www.youtube.com/watch?v=...',
-    save_path='/path/to/save', # 플러그인별 저장 경로 우선 적용
-    filename='video.mp4',  # 선택
-    source_type='auto',    # 자동 감지
-    caller_plugin='youtube', # 호출자 식별
+    save_path='/path/to/save',
+    filename='video.mp4',
+    source_type='auto',
+    caller_plugin='my_plugin_name',  # 콜백 호출 시 식별자
+    callback_id='unique_item_id',    # 콜백 데이터에 포함
 )
+```
+
+## 콜백 수신하기
+
+호출 플러그인에서 `plugin_callback` 메서드를 정의하면 다운로드 완료 시 자동 호출됩니다:
+
+```python
+class MyModule:
+    def plugin_callback(self, data):
+        # data = {'callback_id': ..., 'status': 'completed', 'filepath': ..., 'error': ...}
+        if data['status'] == 'completed':
+            print(f"다운로드 완료: {data['filepath']}")
 ```
 
 ## 설정 가이드

@@ -1,6 +1,6 @@
 name: gommi_download_manager
 package_name: gommi_download_manager
-version: '0.1.0'
+version: '0.1.1'
 description: FlaskFarm 범용 다운로더 큐 - YouTube, 애니24, 링크애니, Anilife 지원
 developer: projectdx
 home: https://gitea.yommi.duckdns.org/projectdx/gommi_downloader_manager

@@ -2,152 +2,317 @@
 {% import "macro.html" as macros %}
 
 {% block content %}
+<!-- Google Fonts: Inter -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-    /* Metallic Theme Variables */
+    /* Premium Modern Design System (Sync with List View) */
     :root {
-        --metal-dark: #1a1a1a;
-        --metal-surface: linear-gradient(145deg, #2d2d2d, #1a1a1a);
-        --metal-border: #404040;
-        --metal-text: #e0e0e0;
-        --metal-text-muted: #888;
-        --metal-highlight: #00bcd4; /* Cyan/Blue Neon */
-        --metal-input-bg: rgba(0, 0, 0, 0.3);
+        --bg-body: #0f172a;
+        --surface: rgba(30, 41, 59, 0.7);
+        --surface-opaque: #1e293b;
+        --border: rgba(255, 255, 255, 0.1);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent-primary: #38bdf8;
+        --accent-secondary: #818cf8;
+        --success: #10b981;
+        --glow: rgba(56, 189, 248, 0.3);
+        --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* Container Spacing */
-    .container-fluid {
-        padding-top: 20px;
+    #gommi_download_manager_queue_setting {
+        font-family: var(--font-sans);
+        color: var(--text-main);
+        padding-bottom: 3rem;
     }
 
-    /* Headers */
-    h4 {
-        color: var(--metal-text);
-        font-weight: 300;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        border-bottom: 2px solid var(--metal-highlight);
-        display: inline-block;
-        padding-bottom: 5px;
+    /* Navigation Override (SJVA Menu Page) */
+    #menu_page_div {
+        margin-bottom: 2rem;
     }
 
-    /* Form Controls */
-    .form-control, .custom-select {
-        background-color: var(--metal-input-bg) !important;
-        border: 1px solid var(--metal-border) !important;
-        color: var(--metal-text) !important;
-        border-radius: 4px;
-        transition: all 0.3s ease;
+    /* Redesigned Navigation Menu (tabs) */
+    #menu_page_div .nav-pills {
+        margin-top: 2px !important;
+        margin-bottom: 12px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px !important;
+        padding: 6px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+        display: inline-flex !important;
+        width: auto !important;
     }
-    .form-control:focus, .custom-select:focus {
-        background-color: rgba(0,0,0,0.5) !important;
-        border-color: var(--metal-highlight) !important;
-        box-shadow: 0 0 10px rgba(0, 188, 212, 0.3) !important;
+
+    /* Global Navigation Spacing Adjustments (Fix for extra gap) */
+    #menu_module_div {
+        padding-top: 0 !important;
+    }
+    #menu_module_div .nav-pills {
+        margin-top: 0 !important;
+        margin-bottom: 5px !important;
+    }
+    @media (min-width: 769px) {
+        #main_container {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+    }
+
+    #menu_page_div .nav-link {
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.6rem 1.25rem;
+        border-radius: 10px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+    }
+
+    #menu_page_div .nav-link:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    #menu_page_div .nav-link.active {
+        background: white !important;
+        color: #0f172a !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 576px) {
+        #menu_page_div .nav-pills {
+            display: flex;
+            width: 100%;
+        }
+        #menu_page_div .nav-link {
+            flex: 1;
+            text-align: center;
+            padding: 0.6rem 0.5rem;
+        }
+    }
+
+    /* Form Styling */
+    .settings-container {
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 2rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     /* Buttons */
-    .btn-outline-primary {
-        color: var(--metal-highlight);
-        border-color: var(--metal-highlight);
-    }
-    .btn-outline-primary:hover {
-        background-color: var(--metal-highlight);
+    .btn-premium {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.6rem 1.25rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 1px solid var(--accent-primary);
+        background: var(--accent-primary);
         color: #000;
-        box-shadow: 0 0 15px var(--metal-highlight);
+        box-shadow: 0 4px 12px var(--glow);
     }
 
-    /* HR */
+    .btn-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px var(--glow);
+        opacity: 0.9;
+        color: #000;
+        text-decoration: none;
+    }
+
+    /* Form Controls Override */
+    .form-control, .custom-select {
+        background-color: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text-main) !important;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        height: auto;
+    }
+
+    .form-control:focus {
+        border-color: var(--accent-primary) !important;
+        box-shadow: 0 0 0 2px var(--glow) !important;
+    }
+
+    label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--text-main);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-text {
+        color: var(--text-muted) !important;
+        font-size: 0.8rem;
+        margin-top: 0.4rem;
+    }
+
+    h5.mb-0 {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--accent-primary);
+        margin-bottom: 1.5rem !important;
+        display: block;
+        width: 100%;
+        border-left: 4px solid var(--accent-primary);
+        padding-left: 1rem;
+    }
+
     hr {
-        border-top: 1px solid rgba(255,255,255,0.1) !important;
-    }
-
-    /* Labels */
-    label, strong {
-        color: #cfcfcf;
-        font-weight: 500;
-    }
-    
-    /* Description text */
-    em {
-        color: var(--metal-text-muted);
-        font-style: normal;
-        font-size: 0.9em;
+        border-top: 1px solid var(--border);
+        margin: 2.5rem 0;
     }
 </style>
-<div class="container-fluid">
-    {{ macros.m_row_start('5') }}
-    {{ macros.m_row_end() }}
 
-    <!-- Header & Save Button -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>GDM 설정</h4>
-        {{ macros.m_button_group([['globalSettingSaveBtn', '설정 저장']]) }}
+<div id="gommi_download_manager_queue_setting" class="mt-4">
+    <div class="page-header">
+        <h1 class="page-title">GDM Settings</h1>
+        <div class="header-actions">
+            <button type="button" class="btn-premium" id="globalSettingSaveBtn">
+                <i class="fa fa-save"></i> Save Changes
+            </button>
+        </div>
     </div>
-    {{ macros.m_hr_head_bottom() }}
 
-    <form id="setting">
-        <!-- Basic Setting -->
-        {{ macros.setting_top_big('기본 설정') }}
-        {{ macros.setting_bottom() }}
-        
-        {{ macros.setting_input_text('save_path', '저장 경로', value=arg['save_path'], desc='{PATH_DATA}는 실제 데이터 경로로 치환됩니다.') }}
-        {{ macros.setting_input_text('temp_path', '임시 경로', value=arg['temp_path'], desc='다운로드 중 임시 파일 저장 경로') }}
-        {{ macros.setting_input_text('max_concurrent', '동시 다운로드 수', value=arg['max_concurrent'], desc='동시에 진행할 최대 다운로드 수') }}
-        {{ macros.setting_select('max_download_rate', '속도 제한', [['0', '무제한'], ['1M', '1 MB/s'], ['3M', '3 MB/s'], ['5M', '5 MB/s'], ['10M', '10 MB/s']], value=arg['max_download_rate'], desc='다운로드 속도를 제한합니다.') }}
+    <div class="settings-container">
+        <form id="setting">
+            <!-- Basic Setting -->
+            <h5 class="mb-4">General Settings</h5>
+            
+            <div class="form-group">
+                <label>Save Path</label>
+                <input type="text" name="save_path" class="form-control" value="{{arg['save_path']}}">
+                <small class="form-text">{PATH_DATA} will be replaced by the actual data path.</small>
+            </div>
 
-        {{ macros.m_hr() }}
+            <div class="form-group">
+                <label>Temp Path</label>
+                <input type="text" name="temp_path" class="form-control" value="{{arg['temp_path']}}">
+                <small class="form-text">Temporary storage path for files during download.</small>
+            </div>
 
-        <!-- Downloader Setting -->
-        {{ macros.setting_top_big('다운로더 설정') }}
-        {{ macros.setting_bottom() }}
-        
-        {{ macros.setting_input_text('aria2c_path', 'aria2c 경로', value=arg['aria2c_path'], desc='aria2c 실행 파일 경로 (고속 다운로드용)') }}
-        {{ macros.setting_input_text('aria2c_connections', 'aria2c 연결 수', value=arg['aria2c_connections'], desc='aria2c 동시 연결 수 (기본 16)') }}
-        {{ macros.setting_input_text('ffmpeg_path', 'ffmpeg 경로', value=arg['ffmpeg_path'], desc='ffmpeg 실행 파일 경로 (HLS 스트림용)') }}
-        {{ macros.setting_input_text('yt_dlp_path', 'yt-dlp 경로', value=arg['yt_dlp_path'], desc='비워두면 Python 모듈 사용') }}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Max Concurrent Downloads</label>
+                        <input type="number" name="max_concurrent" class="form-control" value="{{arg['max_concurrent']}}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Speed Limit</label>
+                        <select name="max_download_rate" class="custom-select">
+                            <option value="0" {% if arg['max_download_rate'] == '0' %}selected{% endif %}>Unlimited</option>
+                            <option value="1M" {% if arg['max_download_rate'] == '1M' %}selected{% endif %}>1 MB/s</option>
+                            <option value="3M" {% if arg['max_download_rate'] == '3M' %}selected{% endif %}>3 MB/s</option>
+                            <option value="5M" {% if arg['max_download_rate'] == '5M' %}selected{% endif %}>5 MB/s</option>
+                            <option value="10M" {% if arg['max_download_rate'] == '10M' %}selected{% endif %}>10 MB/s</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-        {{ macros.m_hr() }}
+            <hr>
 
-        <!-- Retry Setting -->
-        {{ macros.setting_top_big('재시도 설정') }}
-        {{ macros.setting_bottom() }}
-        
-        {{ macros.setting_checkbox('auto_retry', '자동 재시도', value=arg['auto_retry'], desc='다운로드 실패 시 자동으로 재시도') }}
-        {{ macros.setting_input_text('max_retry', '최대 재시도 횟수', value=arg['max_retry'], desc='최대 재시도 횟수') }}
-        
-    </form>
+            <!-- Downloader Setting -->
+            <h5 class="mb-4">External Tool Paths</h5>
+            
+            <div class="form-group">
+                <label>aria2c Path</label>
+                <input type="text" name="aria2c_path" class="form-control" value="{{arg['aria2c_path']}}">
+                <small class="form-text">Executable path for aria2c (used for high-speed downloads).</small>
+            </div>
+
+            <div class="form-group">
+                <label>aria2c Connections</label>
+                <input type="number" name="aria2c_connections" class="form-control" value="{{arg['aria2c_connections']}}">
+                <small class="form-text">Concurrent connections per download (default: 16).</small>
+            </div>
+
+            <div class="form-group">
+                <label>ffmpeg Path</label>
+                <input type="text" name="ffmpeg_path" class="form-control" value="{{arg['ffmpeg_path']}}">
+                <small class="form-text">Executable path for ffmpeg (used for HLS streams).</small>
+            </div>
+
+            <div class="form-group">
+                <label>yt-dlp Path</label>
+                <input type="text" name="yt_dlp_path" class="form-control" value="{{arg['yt_dlp_path']}}">
+                <small class="form-text">If empty, the Python module will be used.</small>
+            </div>
+
+            <hr>
+
+            <!-- Retry Setting -->
+            <h5 class="mb-4">Error Handling</h5>
+            
+            <div class="form-group custom-control custom-switch mb-3">
+                <input type="checkbox" name="auto_retry" class="custom-control-input" id="auto_retry" {% if arg['auto_retry'] == 'True' or arg['auto_retry'] == True %}checked{% endif %}>
+                <label class="custom-control-label" for="auto_retry">Enable Auto-Retry</label>
+                <small class="form-text d-block">Automatically retry failed downloads.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Max Retry Count</label>
+                <input type="number" name="max_retry" class="form-control" value="{{arg['max_retry']}}">
+            </div>
+            
+        </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block tail_js %}
 <script type="text/javascript">
-    var package_name = "{{arg['package_name'] }}";
-    var sub = "{{arg['module_name'] }}"; // sub usually is module name like 'queue'
+    const package_name = "{{arg['package_name']}}";
+    const sub = "{{arg['module_name']}}";
 
-    // Save Button Logic (Standard FlaskFarm Plugin JS)
-    // Note: globalSettingSaveBtn logic is usually handled by framework's default plugin.js if available,
-    // OR we explicitly define it here.
-    // Gommi plugin loads '/package_name/static/package_name.js' ?
-    // I recall checking step 21445 it had `<script src="/{{package_name}}/static/{{package_name}}.js"></script>`
-    // I will explicitly add the save logic just in case the static JS relies on specific form IDs.
-    
     $(document).ready(function(){
-        // Nothing special needed
+        // Handled by common framework
     });
 
     $("body").on('click', '#globalSettingSaveBtn', function(e){
         e.preventDefault();
         var formData = get_formdata('#setting');
         $.ajax({
-            url: '/' + package_name + '/ajax/' + sub + '/setting_save',
+            url: `/${package_name}/ajax/${sub}/setting_save`,
             type: "POST",
             cache: false,
             data: formData,
             dataType: "json",
             success: function(ret) {
                 if (ret.ret == 'success') {
-                    $.notify('설정을 저장했습니다.', {type:'success'});
+                    $.notify('<strong>Settings Saved Successfully</strong>', {type:'success'});
                 } else {
-                    $.notify('저장 실패: ' + ret.msg, {type:'danger'});
+                    $.notify('<strong>Save Failed: ' + ret.msg + '</strong>', {type:'danger'});
                 }
             }
         });

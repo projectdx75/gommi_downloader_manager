@@ -12,7 +12,7 @@ from enum import Enum
 from flask import render_template, jsonify
 from framework import F, socketio
 
-from .setup import P, PluginModuleBase, default_route_socketio_module, ToolUtil
+from framework import F, socketio
 
 
 class DownloadStatus(str, Enum):
@@ -24,6 +24,8 @@ class DownloadStatus(str, Enum):
     ERROR = "error"
     CANCELLED = "cancelled"
 
+
+from plugin import PluginModuleBase
 
 class ModuleQueue(PluginModuleBase):
     """다운로드 큐 관리 모듈"""
@@ -46,23 +48,24 @@ class ModuleQueue(PluginModuleBase):
     _queue_lock = threading.Lock()
     
     def __init__(self, P: Any) -> None:
+        from .setup import default_route_socketio_module
         super(ModuleQueue, self).__init__(P, name='queue', first_menu='list')
         default_route_socketio_module(self, attach='/queue')
 
     
     def process_menu(self, page_name: str, req: Any) -> Any:
         """메뉴 페이지 렌더링"""
-        P.logger.debug(f'Page Request: {page_name}')
-        arg = P.ModelSetting.to_dict()
+        self.P.logger.debug(f'Page Request: {page_name}')
+        arg = self.P.ModelSetting.to_dict()
         try:
             arg['module_name'] = self.name
-            arg['package_name'] = P.package_name  # 명시적 추가
+            arg['package_name'] = self.P.package_name  # 명시적 추가
             arg['path_data'] = F.config['path_data']
-            return render_template(f'{P.package_name}_{self.name}_{page_name}.html', arg=arg)
+            return render_template(f'{self.P.package_name}_{self.name}_{page_name}.html', arg=arg)
         except Exception as e:
-            P.logger.error(f'Exception:{str(e)}')
-            P.logger.error(traceback.format_exc())
-            return render_template('sample.html', title=f"{P.package_name}/{self.name}/{page_name}")
+            self.P.logger.error(f'Exception:{str(e)}')
+            self.P.logger.error(traceback.format_exc())
+            return render_template('sample.html', title=f"{self.P.package_name}/{self.name}/{page_name}")
     
     def process_ajax(self, command: str, req: Any) -> Any:
         """AJAX 명령 처리"""
@@ -71,18 +74,39 @@ class ModuleQueue(PluginModuleBase):
         try:
             if command == 'add':
                 # 큐에 다운로드 추가
+                from .setup import P, ToolUtil
                 url = req.form['url']
-                save_path = req.form.get('save_path') or ToolUtil.make_path(P.ModelSetting.get('save_path'))
+                save_path = req.form.get('save_path') or ToolUtil.make_path(self.P.ModelSetting.get('save_path'))
                 filename = req.form.get('filename')
                 
                 item = self.add_download(url, save_path, filename)
                 ret['data'] = item.as_dict() if item else None
                 
             elif command == 'list':
-                # 진행 중인 다운로드 목록
-                items = [d.get_status() for d in self._downloads.values()]
-                P.logger.debug(f'List Command: {len(items)} items')
-                ret['data'] = items
+                # 진행 중인 다운로드 목록 + 최근 DB 내역 (영속성 강화)
+                active_items = [d.get_status() for d in self._downloads.values()]
+                active_ids = [i['id'] for i in active_items if 'id' in i]
+                
+                # DB에서 최근 50개 가져와서 합치기
+                from .model import ModelDownloadItem
+                with F.app.app_context():
+                    db_items = F.db.session.query(ModelDownloadItem).order_by(ModelDownloadItem.id.desc()).limit(50).all()
+                    for db_item in db_items:
+                        # 이미 active에 있으면 스킵
+                        is_active = False
+                        for ai in active_items:
+                            if ai.get('db_id') == db_item.id:
+                                is_active = True
+                                break
+                        if not is_active:
+                            item_dict = db_item.as_dict()
+                            item_dict['id'] = f"db_{db_item.id}"
+                            # completed 상태면 진행률 100%로 표시
+                            if item_dict.get('status') == 'completed':
+                                item_dict['progress'] = 100
+                            active_items.append(item_dict)
+                
+                ret['data'] = active_items
                 
             elif command == 'cancel':
                 # 다운로드 취소
@@ -119,8 +143,8 @@ class ModuleQueue(PluginModuleBase):
                 ret['msg'] = '목록을 초기화했습니다.'
                     
         except Exception as e:
-            P.logger.error(f'Exception:{str(e)}')
-            P.logger.error(traceback.format_exc())
+            self.P.logger.error(f'Exception:{str(e)}')
+            self.P.logger.error(traceback.format_exc())
             ret['ret'] = 'error'
             ret['msg'] = str(e)
             
@@ -140,30 +164,21 @@ class ModuleQueue(PluginModuleBase):
         on_progress: Optional[Callable] = None,
         on_complete: Optional[Callable] = None,
         on_error: Optional[Callable] = None,
+        title: Optional[str] = None,
+        thumbnail: Optional[str] = None,
+        meta: Optional[Dict[str, Any]] = None,
         **options
     ) -> Optional['DownloadTask']:
-        """
-        다운로드를 큐에 추가 (외부 플러그인에서 호출)
-        
-        Args:
-            url: 다운로드 URL
-            save_path: 저장 경로
-            filename: 파일명 (자동 감지 가능)
-            source_type: 소스 타입 (auto, youtube, ani24, linkkf, anilife, http)
-            caller_plugin: 호출 플러그인 이름
-            callback_id: 콜백 식별자
-            on_progress: 진행률 콜백 (progress, speed, eta)
-            on_complete: 완료 콜백 (filepath)
-            on_error: 에러 콜백 (error_message)
-            **options: 추가 옵션 (headers, cookies 등)
-        
-        Returns:
-            DownloadTask 인스턴스
-        """
+        """다운로드를 큐에 추가 (외부 플러그인에서 호출)"""
         try:
+            # 옵션 평탄화 (Nesting 방지)
+            if 'options' in options and isinstance(options['options'], dict):
+                inner_options = options.pop('options')
+                options.update(inner_options)
+            
             # 소스 타입 자동 감지
             if not source_type or source_type == 'auto':
-                source_type = cls._detect_source_type(url)
+                source_type = cls._detect_source_type(url, caller_plugin, meta)
             
             # DownloadTask 생성
             task = DownloadTask(
@@ -176,6 +191,9 @@ class ModuleQueue(PluginModuleBase):
                 on_progress=on_progress,
                 on_complete=on_complete,
                 on_error=on_error,
+                title=title,
+                thumbnail=thumbnail,
+                meta=meta,
                 **options
             )
             
@@ -187,6 +205,7 @@ class ModuleQueue(PluginModuleBase):
             task.start()
             
             # DB 저장
+            import json
             from .model import ModelDownloadItem
             db_item = ModelDownloadItem()
             db_item.created_time = datetime.now()
@@ -197,6 +216,10 @@ class ModuleQueue(PluginModuleBase):
             db_item.status = DownloadStatus.PENDING
             db_item.caller_plugin = caller_plugin
             db_item.callback_id = callback_id
+            db_item.title = title or task.title
+            db_item.thumbnail = thumbnail or task.thumbnail
+            if meta:
+                db_item.meta = json.dumps(meta, ensure_ascii=False)
             db_item.save()
             
             task.db_id = db_item.id
@@ -205,6 +228,7 @@ class ModuleQueue(PluginModuleBase):
             return task
             
         except Exception as e:
+            from .setup import P
             P.logger.error(f'add_download error: {e}')
             P.logger.error(traceback.format_exc())
             return None
@@ -220,10 +244,26 @@ class ModuleQueue(PluginModuleBase):
         return list(cls._downloads.values())
     
     @classmethod
-    def _detect_source_type(cls, url: str) -> str:
-        """URL에서 소스 타입 자동 감지"""
+    def _detect_source_type(cls, url: str, caller_plugin: Optional[str] = None, meta: Optional[Dict] = None) -> str:
+        """URL 및 호출자 정보를 기반으로 지능적 소스 타입 감지"""
         url_lower = url.lower()
         
+        # 1. 호출자(Plugin) 기반 우선 판단
+        if caller_plugin:
+            cp_lower = caller_plugin.lower()
+            if 'anilife' in cp_lower: return 'anilife'
+            if 'ohli24' in cp_lower or 'ani24' in cp_lower: return 'ani24'
+            if 'linkkf' in cp_lower: return 'linkkf'
+            if 'youtube' in cp_lower: return 'youtube'
+        
+        # 2. 메타데이터 기반 판단
+        if meta and meta.get('source'):
+            ms_lower = meta.get('source').lower()
+            if ms_lower in ['ani24', 'ohli24']: return 'ani24'
+            if ms_lower == 'anilife': return 'anilife'
+            if ms_lower == 'linkkf': return 'linkkf'
+
+        # 3. URL 기반 판단
         if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
             return 'youtube'
         elif 'ani24' in url_lower or 'ohli24' in url_lower:
@@ -239,11 +279,13 @@ class ModuleQueue(PluginModuleBase):
     
     def plugin_load(self) -> None:
         """플러그인 로드 시 초기화"""
-        P.logger.info('gommi_downloader 플러그인 로드')
+        self.P.logger.info('gommi_downloader 플러그인 로드')
         try:
             # DB에서 진행 중인 작업 로드
             with F.app.app_context():
                 from .model import ModelDownloadItem
+                ModelDownloadItem.P = self.P
+                ModelDownloadItem.check_migration()
                 
                 # 간단하게 status != completed, cancelled, error
                 items = F.db.session.query(ModelDownloadItem).filter(
@@ -262,8 +304,10 @@ class ModuleQueue(PluginModuleBase):
                         filename=item.filename,
                         source_type=item.source_type,
                         caller_plugin=item.caller_plugin,
-                        callback_id=item.callback_id
-                        # options? DB에 저장 안함. 필요하면 추가해야 함.
+                        callback_id=item.callback_id,
+                        title=item.title,
+                        thumbnail=item.thumbnail,
+                        meta=item.as_dict().get('meta')
                     )
                     task.status = DownloadStatus(item.status)
                     task.db_id = item.id
@@ -277,11 +321,11 @@ class ModuleQueue(PluginModuleBase):
                     self._downloads[task.id] = task
                     task.start()
                     
-                P.logger.info(f'{len(items)}개의 중단된 다운로드 작업 복원됨')
+                self.P.logger.info(f'{len(items)}개의 중단된 다운로드 작업 복원됨')
             
         except Exception as e:
-            P.logger.error(f'plugin_load error: {e}')
-            P.logger.error(traceback.format_exc())
+            self.P.logger.error(f'plugin_load error: {e}')
+            self.P.logger.error(traceback.format_exc())
     
     def plugin_unload(self) -> None:
         """플러그인 언로드 시 정리"""
@@ -307,6 +351,9 @@ class DownloadTask:
         on_progress: Optional[Callable] = None,
         on_complete: Optional[Callable] = None,
         on_error: Optional[Callable] = None,
+        title: Optional[str] = None,
+        thumbnail: Optional[str] = None,
+        meta: Optional[Dict[str, Any]] = None,
         **options
     ):
         with self._counter_lock:
@@ -319,6 +366,9 @@ class DownloadTask:
         self.source_type = source_type
         self.caller_plugin = caller_plugin
         self.callback_id = callback_id
+        self.title = title or ''
+        self.thumbnail = thumbnail or ''
+        self.meta = meta or {}
         self.options = options
         
         # 콜백
@@ -332,7 +382,7 @@ class DownloadTask:
         self.speed = ''
         self.eta = ''
         self.error_message = ''
-        self.filepath = ''
+        self.filepath = os.path.join(save_path, filename) if filename else ''
         
         # 메타데이터
         self.title = ''
@@ -382,21 +432,35 @@ class DownloadTask:
                 self.status = DownloadStatus.COMPLETED
                 self.filepath = result.get('filepath', '')
                 self.progress = 100
+                
+                # DB 업데이트
+                self._update_db_status()
+                
+                # 실시간 콜백 처리
                 if self._on_complete:
                     self._on_complete(self.filepath)
+                
+                # 플러그인 간 영구적 콜백 처리
+                if self.caller_plugin and self.callback_id:
+                    self._invoke_plugin_callback()
             else:
                 self.status = DownloadStatus.ERROR
                 self.error_message = result.get('error', 'Unknown error')
+                self._update_db_status()
                 if self._on_error:
                     self._on_error(self.error_message)
                     
         except Exception as e:
+            from .setup import P
             P.logger.error(f'Download error: {e}')
             P.logger.error(traceback.format_exc())
             self.status = DownloadStatus.ERROR
             self.error_message = str(e)
             if self._on_error:
                 self._on_error(self.error_message)
+            
+            # 0바이트 파일 정리 (실패 시)
+            self._cleanup_if_empty()
         
         finally:
             self._emit_status()
@@ -418,7 +482,7 @@ class DownloadTask:
             socketio.emit(
                 'download_status',
                 self.get_status(),
-                namespace=f'/{P.package_name}'
+                namespace=f'/gommi_download_manager'
             )
         except:
             pass
@@ -429,6 +493,7 @@ class DownloadTask:
         if self._downloader:
             self._downloader.cancel()
         self.status = DownloadStatus.CANCELLED
+        self._cleanup_if_empty()
         self._emit_status()
     
     def pause(self):
@@ -444,6 +509,90 @@ class DownloadTask:
             self._downloader.resume()
         self.status = DownloadStatus.DOWNLOADING
         self._emit_status()
+
+    def _cleanup_if_empty(self):
+        """출력 파일이 0바이트거나 존재하지 않으면 삭제 (정리)"""
+        try:
+            if self.filepath and os.path.exists(self.filepath):
+                if os.path.getsize(self.filepath) == 0:
+                    from .setup import P
+                    P.logger.info(f"Cleaning up 0-byte file: {self.filepath}")
+                    os.remove(self.filepath)
+        except Exception as e:
+            from .setup import P
+            P.logger.error(f"Cleanup error: {e}")
+
+    def _update_db_status(self):
+        """DB의 상태 정보를 동기화"""
+        try:
+            if self.db_id:
+                from .model import ModelDownloadItem
+                with F.app.app_context():
+                    item = F.db.session.query(ModelDownloadItem).filter_by(id=self.db_id).first()
+                    if item:
+                        item.status = self.status
+                        if self.status == DownloadStatus.COMPLETED:
+                            item.completed_time = datetime.now()
+                        if self.error_message:
+                            item.error_message = self.error_message
+                        F.db.session.add(item)
+                        F.db.session.commit()
+        except Exception as e:
+            from .setup import P
+            P.logger.error(f"Failed to update DB status: {e}")
+
+    def _invoke_plugin_callback(self):
+        """호출한 플러그인의 콜백 메서드 호출"""
+        try:
+            from .setup import P
+            P.logger.info(f"Invoking callback for plugin: {self.caller_plugin}, id: {self.callback_id}")
+            
+            # 플러그인 인스턴스 찾기 (PluginManager 사용)
+            from framework import F
+            target_P = None
+            
+            # caller_plugin은 "anime_downloader_ohli24" 형식이므로 패키지명 추출
+            parts = self.caller_plugin.split('_')
+            package_name = parts[0] if parts else self.caller_plugin
+            
+            # 패키지 이름으로 여러 조합 시도
+            possible_names = [
+                self.caller_plugin,  # anime_downloader_ohli24
+                '_'.join(parts[:2]) if len(parts) > 1 else self.caller_plugin,  # anime_downloader
+                package_name  # anime
+            ]
+            
+            for name in possible_names:
+                if name in F.PluginManager.all_package_list:
+                    pkg_info = F.PluginManager.all_package_list[name]
+                    if pkg_info.get('loading') and 'P' in pkg_info:
+                        target_P = pkg_info['P']
+                        break
+            
+            if target_P:
+                # 모듈에서 콜백 메서드 찾기
+                callback_invoked = False
+                for module_name, module_instance in getattr(target_P, 'module_list', {}).items():
+                    if hasattr(module_instance, 'plugin_callback'):
+                        callback_data = {
+                            'callback_id': self.callback_id,
+                            'status': self.status,
+                            'filepath': self.filepath,
+                            'filename': os.path.basename(self.filepath) if self.filepath else '',
+                            'error': self.error_message
+                        }
+                        module_instance.plugin_callback(callback_data)
+                        callback_invoked = True
+                        P.logger.info(f"Callback invoked on module {module_name}")
+                        break
+                
+                if not callback_invoked:
+                    P.logger.debug(f"No plugin_callback method found in {self.caller_plugin}")
+            else:
+                P.logger.debug(f"Plugin {self.caller_plugin} not found in PluginManager")
+        except Exception as e:
+            P.logger.error(f"Error invoking plugin callback: {e}")
+            P.logger.error(traceback.format_exc())
     
     def get_status(self) -> Dict[str, Any]:
         """현재 상태 반환"""
@@ -459,8 +608,10 @@ class DownloadTask:
             'eta': self.eta,
             'title': self.title,
             'thumbnail': self.thumbnail,
+            'meta': self.meta,
             'error_message': self.error_message,
             'filepath': self.filepath,
             'caller_plugin': self.caller_plugin,
             'callback_id': self.callback_id,
+            'db_id': self.db_id,
         }
