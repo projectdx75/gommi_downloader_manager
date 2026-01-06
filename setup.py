@@ -22,6 +22,7 @@ setting = {
     'use_db': True,
     'use_default_setting': True,
     'home_module': 'queue',
+    'package_name': package_name,
     'menu': {
         'uri': package_name,
         'name': 'GDM',
