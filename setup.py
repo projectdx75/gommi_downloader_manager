@@ -14,13 +14,16 @@ gommi_download_manager - FlaskFarm 범용 다운로더 큐 플러그인
 """
 import traceback
 
+import os
+package_name = os.path.split(os.path.dirname(__file__))[-1]
+
 setting = {
     'filepath': __file__,
     'use_db': True,
     'use_default_setting': True,
     'home_module': 'queue',
     'menu': {
-        'uri': __package__,
+        'uri': package_name,
         'name': 'GDM',
         'list': [
             {
