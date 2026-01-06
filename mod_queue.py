@@ -424,6 +424,7 @@ class DownloadTask:
                 save_path=self.save_path,
                 filename=self.filename,
                 progress_callback=self._progress_callback,
+                info_callback=self._info_update_callback,
                 **self.options
             )
             
@@ -488,6 +489,37 @@ class DownloadTask:
         except:
             pass
     
+
+    def _info_update_callback(self, info_dict):
+        """다운로더로부터 메타데이터 업데이트 수신"""
+        try:
+            if 'title' in info_dict and info_dict['title']:
+                self.title = info_dict['title']
+                if 'thumbnail' in info_dict and info_dict['thumbnail']:
+                    self.thumbnail = info_dict['thumbnail']
+                
+                # DB 업데이트
+                self._update_db_info()
+                
+                # 상태 전송
+                self._emit_status()
+        except:
+            pass
+
+    def _update_db_info(self):
+        """DB의 제목/썸네일 정보 동기화"""
+        try:
+            if self.db_id:
+                from .model import ModelDownloadItem
+                with F.app.app_context():
+                    item = F.db.session.query(ModelDownloadItem).filter_by(id=self.db_id).first()
+                    if item:
+                        item.title = self.title
+                        item.thumbnail = self.thumbnail
+                        F.db.session.commit()
+        except:
+            pass
+
     def cancel(self):
         """다운로드 취소"""
         self._cancelled = True

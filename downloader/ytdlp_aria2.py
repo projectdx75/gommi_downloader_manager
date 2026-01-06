@@ -33,6 +33,7 @@ class YtdlpAria2Downloader(BaseDownloader):
         save_path: str,
         filename: Optional[str] = None,
         progress_callback: Optional[Callable] = None,
+        info_callback: Optional[Callable] = None,
         **options
     ) -> Dict[str, Any]:
         """yt-dlp + aria2c로 다운로드"""
@@ -46,7 +47,6 @@ class YtdlpAria2Downloader(BaseDownloader):
                 output_template = os.path.join(save_path, '%(title)s.%(ext)s')
             
             # yt-dlp 명령어 구성
-            # 기본 명령어 구성 (항상 verbose 로그 남기도록 수정)
             cmd = [
                 'yt-dlp',
                 '--newline',  # 진행률 파싱용
@@ -54,9 +54,12 @@ class YtdlpAria2Downloader(BaseDownloader):
                 '-o', output_template,
             ]
             
+            # 제목/썸네일 업데이트용 출력 추가 (GDM_FIX)
+            cmd.extend(['--print', 'before_dl:GDM_FIX:title:%(title)s'])
+            cmd.extend(['--print', 'before_dl:GDM_FIX:thumb:%(thumbnail)s'])
+            
             # aria2c 사용 (설치되어 있으면)
             aria2c_path = options.get('aria2c_path', 'aria2c')
-            # TODO: 나중에 설정에서 쓰레드 수 지정 (기본값 4로 변경)
             connections = options.get('connections', 4)
             
             # 속도 제한 설정
@@ -69,14 +72,6 @@ class YtdlpAria2Downloader(BaseDownloader):
                 log_rate_msg = max_rate
                 cmd.extend(['--limit-rate', max_rate]) # Native downloader limit
 
-            # aria2c 사용 (일시 중지: 진행률 파싱 문제 해결 전까지 Native 사용)
-            if False and self._check_aria2c(aria2c_path):
-                cmd.extend([
-                    '--downloader', 'aria2c',
-                    '--downloader-args', f'aria2c:-x {connections} -s {connections} -k 1M {max_rate_arg}',
-                ])
-                logger.debug(f'aria2c 사용: {connections}개 연결 (속도제한 {log_rate_msg})')
-            
             # 포맷 선택
             format_spec = options.get('format')
             if not format_spec:
@@ -102,14 +97,12 @@ class YtdlpAria2Downloader(BaseDownloader):
             # FFmpeg 경로 자동 감지 및 설정
             ffmpeg_path = options.get('ffmpeg_path') or P.ModelSetting.get('ffmpeg_path')
             
-            # 경로가 비어있거나 'ffmpeg' 같은 단순 이름인 경우 자동 감지 시도
             if not ffmpeg_path or ffmpeg_path == 'ffmpeg':
                 import shutil
                 detected_path = shutil.which('ffmpeg')
                 if detected_path:
                     ffmpeg_path = detected_path
                 else:
-                    # Mac Homebrew 등 일반적인 경로 추가 탐색
                     common_paths = [
                         '/opt/homebrew/bin/ffmpeg',
                         '/usr/local/bin/ffmpeg',
@@ -121,7 +114,6 @@ class YtdlpAria2Downloader(BaseDownloader):
                             break
             
             if ffmpeg_path:
-                # 파일 경로인 경우 폴더 경로로 변환하거나 그대로 사용 (yt-dlp는 둘 다 지원)
                 cmd.extend(['--ffmpeg-location', ffmpeg_path])
                 logger.debug(f'[GDM] 감지된 FFmpeg 경로: {ffmpeg_path}')
 
@@ -130,7 +122,6 @@ class YtdlpAria2Downloader(BaseDownloader):
             if isinstance(extra_args, list):
                 cmd.extend(extra_args)
             
-            # 후처리 옵션 간편 지원 (예: {'extract_audio': True, 'audio_format': 'mp3'})
             if options.get('extract_audio'):
                 cmd.append('--extract-audio')
                 if options.get('audio_format'):
@@ -142,6 +133,14 @@ class YtdlpAria2Downloader(BaseDownloader):
             if options.get('add_metadata'):
                 cmd.append('--add-metadata')
             
+            if options.get('outtmpl'):
+                 # outtmpl 옵션이 별도로 전달된 경우 덮어쓰기 (output_template는 -o가 이미 차지함)
+                 # 하지만 yt-dlp -o 옵션이 곧 outtmpl임.
+                 # 파일명 템플릿 문제 해결을 위해 filename 인자 대신 outtmpl 옵션을 우선시
+                 # 위에서 -o output_template를 이미 넣었으므로, 여기서 다시 넣으면 중복될 수 있음.
+                 # 따라서 로직 수정: filename 없이 outtmpl만 온 경우
+                 pass
+
             # URL 추가
             cmd.append(url)
             
@@ -168,11 +167,24 @@ class YtdlpAria2Downloader(BaseDownloader):
                 line = line.strip()
                 if not line:
                     continue
+
+                # 메타데이터 파싱 (GDM_FIX)
+                if 'GDM_FIX:' in line:
+                    try:
+                        if 'GDM_FIX:title:' in line:
+                            title = line.split('GDM_FIX:title:', 1)[1].strip()
+                            if info_callback:
+                                info_callback({'title': title})
+                        elif 'GDM_FIX:thumb:' in line:
+                            thumb = line.split('GDM_FIX:thumb:', 1)[1].strip()
+                            if info_callback:
+                                info_callback({'thumbnail': thumb})
+                    except:
+                        pass
                 
                 # 진행률 파싱 (yt-dlp default)
                 progress_match = re.search(r'\[download\]\s+(\d+\.?\d*)%', line)
                 
-                # 로그 출력 여부 결정 (진행률은 5% 단위로만)
                 should_log = True
                 if progress_match:
                     pct = float(progress_match.group(1))
@@ -184,20 +196,15 @@ class YtdlpAria2Downloader(BaseDownloader):
                 if should_log:
                     logger.info(f'[GDM][yt-dlp] {line}')
                 
-                # 진행률 파싱 (aria2c)
                 if not progress_match:
-                    # aria2c match
                     aria2_match = re.search(r'\(\s*([\d.]+)%\)', line)
                     if aria2_match and (('DL:' in line) or ('CN:' in line)):
                         try:
                             progress = int(float(aria2_match.group(1)))
-                            
                             speed_match = re.search(r'DL:(\S+)', line)
                             speed = speed_match.group(1) if speed_match else ''
-                            
                             eta_match = re.search(r'ETA:(\S+)', line)
                             eta = eta_match.group(1) if eta_match else ''
-                            
                             if progress_callback:
                                  progress_callback(progress, speed, eta)
                             continue
@@ -206,27 +213,20 @@ class YtdlpAria2Downloader(BaseDownloader):
 
                 if progress_match and progress_callback:
                     progress = int(float(progress_match.group(1)))
-                    
-                    # 속도 파싱
                     speed = ''
                     speed_match = re.search(r'at\s+([\d.]+\s*[KMG]?i?B/s)', line)
                     if speed_match:
                         speed = speed_match.group(1)
-                    
-                    # ETA 파싱
                     eta = ''
                     eta_match = re.search(r'ETA\s+([\d:]+)', line)
                     if eta_match:
                         eta = eta_match.group(1)
-                    
                     progress_callback(progress, speed, eta)
                 
-                # 최종 파일 경로 추출 (Merger, VideoConvertor, Destination 모두 대응)
                 if any(x in line for x in ['[Merger]', '[VideoConvertor]', 'Destination:']):
                     path_match = re.search(r'(?:Destination:|into|to)\s+["\']?(.+?)(?:["\']|$)', line)
                     if path_match:
                         potential_path = path_match.group(1).strip('"\'')
-                        # 확장자가 있는 경우만 파일 경로로 간주
                         if '.' in os.path.basename(potential_path):
                             final_filepath = potential_path
             
