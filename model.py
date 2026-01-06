@@ -5,25 +5,8 @@ from plugin import ModelBase, db
 from framework import F
 import os
 
-
 # 패키지 이름 동적 처리 (폴더명 기준)
 package_name = os.path.split(os.path.dirname(__file__))[-1]
-
-# Bind Key 문제 해결: 
-# setup.py가 __package__를 사용하면 'gommi_download_manager'로 인식될 수 있고, 
-# 파일시스템 기준은 'gommi_downloader_manager'일 수 있음.
-# FlaskFarm은 폴더명 기준으로 SQLALCHEMY_BINDS를 생성하므로,
-# 여기서 package_name(폴더명)이 BINDS에 있는지 확인하고, 없으면 예외 처리를 하거나 BINDS를 맞춰줌.
-
-try:
-    if package_name not in F.app.config['SQLALCHEMY_BINDS']:
-        # 만약 현재 폴더명 키가 없다면.. 이상한 상황이지만,
-        # 'gommi_download_manager' (er 빠진거)가 있는지 체크
-        legacy_name = 'gommi_download_manager'
-        if legacy_name in F.app.config['SQLALCHEMY_BINDS']:
-            package_name = legacy_name
-except:
-    pass
 
 class ModelDownloadItem(ModelBase):
     """다운로드 아이템 DB 모델"""

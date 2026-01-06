@@ -482,7 +482,7 @@ class DownloadTask:
             socketio.emit(
                 'download_status',
                 self.get_status(),
-                namespace=f'/gommi_download_manager'
+                namespace=f'/gommi_downloader_manager'
             )
         except:
             pass
