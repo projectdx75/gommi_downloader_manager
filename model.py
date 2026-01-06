@@ -69,6 +69,12 @@ class ModelDownloadItem(ModelBase):
             conn = sqlite3.connect(db_file)
             cursor = conn.cursor()
             
+            # 테이블 존재 여부 확인
+            cursor.execute(f"SELECT count(*) FROM sqlite_master WHERE type='table' AND name='{cls.__tablename__}'")
+            if cursor.fetchone()[0] == 0:
+                conn.close()
+                return
+
             # meta 컬럼 확인
             cursor.execute(f"PRAGMA table_info({cls.__tablename__})")
             columns = [info[1] for info in cursor.fetchall()]
