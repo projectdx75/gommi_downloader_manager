@@ -396,6 +396,9 @@ class DownloadTask:
         self._downloader = None
         self._cancelled = False
         self.db_id: Optional[int] = None
+        self.start_time: Optional[str] = None
+        self.end_time: Optional[str] = None
+        self.created_time: str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     def start(self):
         """다운로드 시작 (비동기)"""
@@ -406,6 +409,8 @@ class DownloadTask:
         """다운로드 실행"""
         try:
             self.status = DownloadStatus.EXTRACTING
+            if not self.start_time:
+                self.start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self._emit_status()
             
             # 다운로더 선택 및 실행
@@ -434,13 +439,17 @@ class DownloadTask:
                 self.status = DownloadStatus.COMPLETED
                 self.filepath = result.get('filepath', '')
                 self.progress = 100
+                self.end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                if self.filepath and os.path.exists(self.filepath):
+                    self.filesize = os.path.getsize(self.filepath)
                 
                 # DB 업데이트
                 self._update_db_status()
                 
                 # 실시간 콜백 처리
                 if self._on_complete:
-                    self._on_complete(self.filepath)
+                    try: self._on_complete(self.filepath)
+                    except: pass
                 
                 # 플러그인 간 영구적 콜백 처리
                 if self.caller_plugin and self.callback_id:
@@ -566,6 +575,7 @@ class DownloadTask:
                         item.status = self.status
                         if self.status == DownloadStatus.COMPLETED:
                             item.completed_time = datetime.now()
+                            item.filesize = self.filesize
                         if self.error_message:
                             item.error_message = self.error_message
                         F.db.session.add(item)
@@ -605,7 +615,15 @@ class DownloadTask:
             if target_P:
                 # 모듈에서 콜백 메서드 찾기
                 callback_invoked = False
-                for module_name, module_instance in getattr(target_P, 'module_list', {}).items():
+                module_list = getattr(target_P, 'module_list', [])
+                if isinstance(module_list, dict):
+                    modules = module_list.items()
+                elif isinstance(module_list, list):
+                    modules = [(getattr(m, 'name', str(i)), m) for i, m in enumerate(module_list)]
+                else:
+                    modules = []
+
+                for module_name, module_instance in modules:
                     if hasattr(module_instance, 'plugin_callback'):
                         callback_data = {
                             'callback_id': self.callback_id,
@@ -647,4 +665,8 @@ class DownloadTask:
             'caller_plugin': self.caller_plugin,
             'callback_id': self.callback_id,
             'db_id': self.db_id,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'created_time': self.created_time,
+            'file_size': self.filesize,
         }

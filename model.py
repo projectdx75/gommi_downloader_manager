@@ -57,9 +57,10 @@ class ModelDownloadItem(ModelBase):
                 ret['meta'] = {}
         else:
             ret['meta'] = {}
-        # Format created_time for frontend
         if self.created_time:
             ret['created_time'] = self.created_time.strftime('%Y-%m-%d %H:%M:%S')
+        # JS UI expects file_size (with underscore)
+        ret['file_size'] = self.filesize or 0
         return ret
 
     @classmethod
