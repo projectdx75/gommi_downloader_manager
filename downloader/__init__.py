@@ -8,11 +8,11 @@ from .base import BaseDownloader
 def get_downloader(source_type: str) -> Optional[BaseDownloader]:
     """소스 타입에 맞는 다운로더 인스턴스 반환"""
     
-    if source_type in ('youtube', 'general'):
+    if source_type in ('youtube', 'general', 'linkkf'):
         from .ytdlp_aria2 import YtdlpAria2Downloader
         return YtdlpAria2Downloader()
     
-    elif source_type in ('ani24', 'linkkf', 'hls'):
+    elif source_type in ('ani24', 'hls'):
         from .ffmpeg_hls import FfmpegHlsDownloader
         return FfmpegHlsDownloader()
     

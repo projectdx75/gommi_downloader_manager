@@ -98,6 +98,11 @@ class YtdlpAria2Downloader(BaseDownloader):
             # 프록시
             if options.get('proxy'):
                 cmd.extend(['--proxy', options['proxy']])
+            
+            # HTTP 헤더 추가 (Referer 등 - Linkkf 등 리다이렉트 방지용)
+            if options.get('headers'):
+                for key, value in options['headers'].items():
+                    cmd.extend(['--add-header', f'{key}:{value}'])
 
             # FFmpeg 경로 자동 감지 및 설정
             ffmpeg_path = options.get('ffmpeg_path') or P.ModelSetting.get('ffmpeg_path')
