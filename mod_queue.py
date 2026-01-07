@@ -145,31 +145,27 @@ class ModuleQueue(PluginModuleBase):
             elif command == 'delete':
                 # 특정 항목 완전 삭제 (메모리 + DB)
                 download_id = req.form.get('id', '')
+                db_id_to_delete = None
                 
-                # 메모리에서 삭제
+                # 1. DB ID 추출 및 메모리 정리
                 if download_id in self._downloads:
-                    self._downloads[download_id].cancel()
+                    task = self._downloads[download_id]
+                    if hasattr(task, 'db_id'):
+                        db_id_to_delete = task.db_id
+                    task.cancel()
                     del self._downloads[download_id]
                 
-                # DB에서 삭제 (db_XXX 형태인 경우)
+                # 2. DB에서 삭제 처리
                 if download_id.startswith('db_'):
-                    db_id = int(download_id.replace('db_', ''))
+                    db_id_to_delete = int(download_id.replace('db_', ''))
+                
+                if db_id_to_delete:
                     try:
                         from .model import ModelDownloadItem
                         with F.app.app_context():
-                            F.db.session.query(ModelDownloadItem).filter_by(id=db_id).delete()
+                            F.db.session.query(ModelDownloadItem).filter_by(id=db_id_to_delete).delete()
                             F.db.session.commit()
-                    except Exception as e:
-                        self.P.logger.error(f'DB Delete Error: {e}')
-                else:
-                    # 메모리 기반 ID에서 db_id 추출 시도
-                    try:
-                        task = self._downloads.get(download_id)
-                        if task and hasattr(task, 'db_id') and task.db_id:
-                            from .model import ModelDownloadItem
-                            with F.app.app_context():
-                                F.db.session.query(ModelDownloadItem).filter_by(id=task.db_id).delete()
-                                F.db.session.commit()
+                            self.P.logger.info(f"Deleted DB item: {db_id_to_delete}")
                     except Exception as e:
                         self.P.logger.error(f'DB Delete Error: {e}')
                 
