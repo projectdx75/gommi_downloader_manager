@@ -89,7 +89,9 @@ class FfmpegHlsDownloader(BaseDownloader):
             # 출력 파일
             cmd.append(filepath)
             
-            logger.debug(f'ffmpeg 명령어: {" ".join(cmd[:15])}...')
+            # 92라인 수정: cmd 리스트 내의 None 요소를 빈 문자열로 변환하거나 걸러내기
+            safe_cmd = [str(x) if x is not None else "" for x in cmd]
+            logger.debug(f'ffmpeg 명령어: {" ".join(safe_cmd[:15])}...')
             
             # 먼저 duration 얻기 위해 ffprobe 실행
             duration = self._get_duration(url, options.get('ffprobe_path', 'ffprobe'), headers)
