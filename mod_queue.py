@@ -141,6 +141,39 @@ class ModuleQueue(PluginModuleBase):
                     P.logger.error(f'DB Clear Error: {e}')
                     
                 ret['msg'] = '목록을 초기화했습니다.'
+            
+            elif command == 'delete':
+                # 특정 항목 완전 삭제 (메모리 + DB)
+                download_id = req.form.get('id', '')
+                
+                # 메모리에서 삭제
+                if download_id in self._downloads:
+                    self._downloads[download_id].cancel()
+                    del self._downloads[download_id]
+                
+                # DB에서 삭제 (db_XXX 형태인 경우)
+                if download_id.startswith('db_'):
+                    db_id = int(download_id.replace('db_', ''))
+                    try:
+                        from .model import ModelDownloadItem
+                        with F.app.app_context():
+                            F.db.session.query(ModelDownloadItem).filter_by(id=db_id).delete()
+                            F.db.session.commit()
+                    except Exception as e:
+                        self.P.logger.error(f'DB Delete Error: {e}')
+                else:
+                    # 메모리 기반 ID에서 db_id 추출 시도
+                    try:
+                        task = self._downloads.get(download_id)
+                        if task and hasattr(task, 'db_id') and task.db_id:
+                            from .model import ModelDownloadItem
+                            with F.app.app_context():
+                                F.db.session.query(ModelDownloadItem).filter_by(id=task.db_id).delete()
+                                F.db.session.commit()
+                    except Exception as e:
+                        self.P.logger.error(f'DB Delete Error: {e}')
+                
+                ret['msg'] = '항목이 삭제되었습니다.'
                     
         except Exception as e:
             self.P.logger.error(f'Exception:{str(e)}')
@@ -385,9 +418,7 @@ class DownloadTask:
         self.error_message = ''
         self.filepath = os.path.join(save_path, filename) if filename else ''
         
-        # 메타데이터
-        self.title = ''
-        self.thumbnail = ''
+        # 메타데이터 (이미 __init__ 상단에서 인자로 받은 title, thumbnail을 self.title, self.thumbnail에 할당함)
         self.duration = 0
         self.filesize = 0
         
@@ -670,3 +701,7 @@ class DownloadTask:
             'created_time': self.created_time,
             'file_size': self.filesize,
         }
+    
+    def as_dict(self) -> Dict[str, Any]:
+        """데이터 직렬화 (get_status 별칭)"""
+        return self.get_status()

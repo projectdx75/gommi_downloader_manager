@@ -80,6 +80,15 @@ class FfmpegHlsDownloader(BaseDownloader):
                     except Exception as ce:
                         logger.error(f"Failed to read cookies_file: {ce}")
 
+            # 입력 전 설정 (Reconnection & HTTP persistence fix)
+            cmd.extend([
+                '-reconnect', '1',
+                '-reconnect_at_eof', '1',
+                '-reconnect_streamed', '1',
+                '-reconnect_delay_max', '5',
+                '-http_persistent', '0'
+            ])
+
             # 입력 URL
             cmd.extend(['-i', url])
             

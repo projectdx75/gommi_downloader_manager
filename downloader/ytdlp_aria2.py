@@ -62,6 +62,11 @@ class YtdlpAria2Downloader(BaseDownloader):
             aria2c_path = options.get('aria2c_path', 'aria2c')
             connections = options.get('connections', 4)
             
+            if self._check_aria2c(aria2c_path):
+                cmd.extend(['--external-downloader', aria2c_path])
+                cmd.extend(['--external-downloader-args', f'aria2c:-x{connections} -s{connections} -j{connections} -k1M'])
+                logger.info(f'[GDM] Using aria2c for multi-threaded download (connections: {connections})')
+            
             # 속도 제한 설정
             max_rate = P.ModelSetting.get('max_download_rate')
             if max_rate == '0':
