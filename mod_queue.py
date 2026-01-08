@@ -170,6 +170,119 @@ class ModuleQueue(PluginModuleBase):
                         self.P.logger.error(f'DB Delete Error: {e}')
                 
                 ret['msg'] = '항목이 삭제되었습니다.'
+            
+            # ===== YouTube API for Chrome Extension =====
+            
+            elif command == 'youtube_add':
+                # Chrome 확장에서 YouTube 다운로드 요청
+                import json
+                from .setup import P, ToolUtil
+                
+                # JSON 또는 Form 데이터 처리
+                if req.is_json:
+                    data = req.get_json()
+                else:
+                    data = req.form.to_dict()
+                
+                url = data.get('url', '')
+                if not url:
+                    ret['ret'] = 'error'
+                    ret['msg'] = 'URL이 필요합니다.'
+                    return jsonify(ret)
+                
+                # YouTube URL 검증
+                if 'youtube.com' not in url and 'youtu.be' not in url:
+                    ret['ret'] = 'error'
+                    ret['msg'] = '유효한 YouTube URL이 아닙니다.'
+                    return jsonify(ret)
+                
+                format_id = data.get('format', 'bestvideo+bestaudio/best')
+                save_path = data.get('path') or ToolUtil.make_path(self.P.ModelSetting.get('save_path'))
+                
+                # 다운로드 추가
+                item = self.add_download(
+                    url=url,
+                    save_path=save_path,
+                    source_type='youtube',
+                    caller_plugin='chrome_extension',
+                    format=format_id
+                )
+                
+                if item:
+                    ret['id'] = item.id
+                    ret['msg'] = '다운로드가 추가되었습니다.'
+                else:
+                    ret['ret'] = 'error'
+                    ret['msg'] = '다운로드 추가 실패'
+            
+            elif command == 'youtube_formats':
+                # YouTube 영상 품질 목록 조회
+                url = req.args.get('url') or req.form.get('url', '')
+                
+                if not url:
+                    ret['ret'] = 'error'
+                    ret['msg'] = 'URL이 필요합니다.'
+                    return jsonify(ret)
+                
+                try:
+                    import yt_dlp
+                    
+                    ydl_opts = {
+                        'quiet': True,
+                        'no_warnings': True,
+                        'extract_flat': False,
+                    }
+                    
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url, download=False)
+                        
+                        ret['title'] = info.get('title', '')
+                        ret['thumbnail'] = info.get('thumbnail', '')
+                        ret['duration'] = info.get('duration', 0)
+                        
+                        # 품질 목록 생성
+                        formats = []
+                        
+                        # 미리 정의된 품질 옵션들
+                        formats.append({'id': 'bestvideo+bestaudio/best', 'label': '최고 품질', 'note': '자동 선택'})
+                        
+                        # 실제 포맷에서 해상도 추출
+                        available_heights = set()
+                        for f in info.get('formats', []):
+                            height = f.get('height')
+                            if height and f.get('vcodec') != 'none':
+                                available_heights.add(height)
+                        
+                        # 해상도별 옵션 추가
+                        for height in sorted(available_heights, reverse=True):
+                            if height >= 2160:
+                                formats.append({'id': f'bestvideo[height<=2160]+bestaudio/best', 'label': '4K (2160p)', 'note': '고용량'})
+                            elif height >= 1440:
+                                formats.append({'id': f'bestvideo[height<=1440]+bestaudio/best', 'label': '2K (1440p)', 'note': ''})
+                            elif height >= 1080:
+                                formats.append({'id': f'bestvideo[height<=1080]+bestaudio/best', 'label': 'FHD (1080p)', 'note': '권장'})
+                            elif height >= 720:
+                                formats.append({'id': f'bestvideo[height<=720]+bestaudio/best', 'label': 'HD (720p)', 'note': ''})
+                            elif height >= 480:
+                                formats.append({'id': f'bestvideo[height<=480]+bestaudio/best', 'label': 'SD (480p)', 'note': '저용량'})
+                        
+                        # 오디오 전용 옵션
+                        formats.append({'id': 'bestaudio/best', 'label': '오디오만', 'note': 'MP3 변환'})
+                        
+                        # 중복 제거
+                        seen = set()
+                        unique_formats = []
+                        for f in formats:
+                            if f['id'] not in seen:
+                                seen.add(f['id'])
+                                unique_formats.append(f)
+                        
+                        ret['formats'] = unique_formats
+                        
+                except Exception as e:
+                    self.P.logger.error(f'YouTube format extraction error: {e}')
+                    ret['ret'] = 'error'
+                    ret['msg'] = str(e)
                     
         except Exception as e:
             self.P.logger.error(f'Exception:{str(e)}')

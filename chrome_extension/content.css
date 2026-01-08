@@ -1,0 +1,38 @@
+/* GDM YouTube Downloader - Content Script Styles */
+
+.gdm-yt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-left: 8px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+  border-radius: 18px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+.gdm-yt-btn:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.gdm-yt-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gdm-yt-btn .gdm-icon {
+  font-size: 14px;
+}
+
+.gdm-yt-btn .gdm-text {
+  font-weight: 500;
+}

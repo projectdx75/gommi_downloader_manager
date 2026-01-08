@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GDM YouTube Downloader</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎬 GDM Downloader</h1>
+    </header>
+    
+    <div id="content">
+      <!-- 로딩 -->
+      <div id="loading" class="section">
+        <div class="spinner"></div>
+        <p>영상 정보 불러오는 중...</p>
+      </div>
+      
+      <!-- 에러 -->
+      <div id="error" class="section hidden">
+        <p class="error-text" id="error-message">오류 발생</p>
+        <button id="retry-btn" class="btn btn-secondary">다시 시도</button>
+      </div>
+      
+      <!-- 유튜브가 아닌 경우 -->
+      <div id="not-youtube" class="section hidden">
+        <p>⚠️ YouTube 페이지에서만 사용 가능합니다.</p>
+      </div>
+      
+      <!-- 메인 UI -->
+      <div id="main" class="section hidden">
+        <!-- 영상 정보 -->
+        <div class="video-info">
+          <img id="thumbnail" src="" alt="thumbnail">
+          <div class="video-meta">
+            <h3 id="video-title">제목</h3>
+            <span id="video-duration" class="duration"></span>
+          </div>
+        </div>
+        
+        <!-- 품질 선택 -->
+        <div class="quality-section">
+          <label>품질 선택</label>
+          <div id="quality-options" class="quality-grid">
+            <!-- JS로 동적 생성 -->
+          </div>
+        </div>
+        
+        <!-- 서버 설정 -->
+        <div class="server-section">
+          <label>GDM 서버</label>
+          <input type="text" id="server-url" placeholder="http://localhost:9099">
+          <small>FlaskFarm 서버 주소</small>
+        </div>
+        
+        <!-- 다운로드 버튼 -->
+        <button id="download-btn" class="btn btn-primary">
+          <span class="btn-icon">⬇️</span>
+          다운로드 시작
+        </button>
+        
+        <!-- 상태 메시지 -->
+        <div id="status" class="status hidden"></div>
+      </div>
+    </div>
+    
+    <footer>
+      <small>GDM v1.0</small>
+    </footer>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
