@@ -80,13 +80,13 @@ class FfmpegHlsDownloader(BaseDownloader):
                     except Exception as ce:
                         logger.error(f"Failed to read cookies_file: {ce}")
 
-            # 입력 전 설정 (Reconnection & HTTP persistence fix)
+            # 입력 전 설정 (Reconnection & Allowed extensions for non-standard m3u8 like .txt)
             cmd.extend([
+                '-allowed_extensions', 'ALL',
                 '-reconnect', '1',
                 '-reconnect_at_eof', '1',
                 '-reconnect_streamed', '1',
-                '-reconnect_delay_max', '5',
-                '-http_persistent', '0'
+                '-reconnect_delay_max', '5'
             ])
 
             # 입력 URL
@@ -178,7 +178,8 @@ class FfmpegHlsDownloader(BaseDownloader):
     def _get_duration(self, url: str, ffprobe_path: str, headers: Dict) -> float:
         """ffprobe로 영상 길이 획득"""
         try:
-            cmd = [ffprobe_path, '-v', 'error', '-show_entries', 'format=duration',
+            cmd = [ffprobe_path, '-v', 'error', '-allowed_extensions', 'ALL',
+                   '-show_entries', 'format=duration',
                    '-of', 'default=noprint_wrappers=1:nokey=1']
             
             if headers:
