@@ -64,8 +64,12 @@ class YtdlpAria2Downloader(BaseDownloader):
             
             if self._check_aria2c(aria2c_path):
                 cmd.extend(['--external-downloader', aria2c_path])
-                cmd.extend(['--external-downloader-args', f'aria2c:-x{connections} -s{connections} -j{connections} -k1M'])
+                # aria2c 설정: -x=연결수, -s=분할수, -j=병렬, -k=조각크기, --console-log-level=notice로 진행률 출력
+                cmd.extend(['--external-downloader-args', f'aria2c:-x{connections} -s{connections} -j{connections} -k1M --summary-interval=1 --console-log-level=notice'])
                 logger.info(f'[GDM] Using aria2c for multi-threaded download (connections: {connections})')
+            
+            # 진행률 템플릿 추가 (yt-dlp native downloader)
+            cmd.extend(['--progress-template', 'download:GDM_PROGRESS:%(progress._percent_str)s:%(progress._speed_str)s:%(progress._eta_str)s'])
             
             # 속도 제한 설정
             max_rate = P.ModelSetting.get('max_download_rate')
@@ -189,6 +193,24 @@ class YtdlpAria2Downloader(BaseDownloader):
                             thumb = line.split('GDM_FIX:thumb:', 1)[1].strip()
                             if info_callback:
                                 info_callback({'thumbnail': thumb})
+                    except:
+                        pass
+                
+                # 진행률 파싱 - GDM_PROGRESS 템플릿 (우선)
+                # 형식: GDM_PROGRESS:XX.X%:SPEED:ETA
+                if 'GDM_PROGRESS:' in line:
+                    try:
+                        parts = line.split('GDM_PROGRESS:', 1)[1].split(':')
+                        if len(parts) >= 1:
+                            pct_str = parts[0].strip().replace('%', '').strip()
+                            progress = int(float(pct_str)) if pct_str and pct_str != 'N/A' else 0
+                            speed = parts[1].strip() if len(parts) > 1 else ''
+                            eta = parts[2].strip() if len(parts) > 2 else ''
+                            if speed == 'N/A': speed = ''
+                            if eta == 'N/A': eta = ''
+                            if progress_callback and progress > 0:
+                                progress_callback(progress, speed, eta)
+                            continue
                     except:
                         pass
                 
