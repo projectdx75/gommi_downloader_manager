@@ -798,18 +798,7 @@
         const container = document.getElementById('download_list');
         if (!container) return;
         
-        // Save expanded card IDs before re-rendering
-        const expandedIds = [];
-        container.querySelectorAll('.dl-card.expanded').forEach(function(card) {
-            expandedIds.push(card.id);
-        });
-        
-        // Save checked checkbox IDs before re-rendering
-        const checkedIds = [];
-        container.querySelectorAll('.dl-select-checkbox:checked').forEach(function(cb) {
-            checkedIds.push(cb.dataset.id);
-        });
-        
+        // Handle empty state
         if (!items || items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -819,30 +808,96 @@
             return;
         }
         
-        let html = '';
-        items.forEach(function(item) {
-            html += createDownloadCard(item);
-        });
-        container.innerHTML = html;
+        // Build a map of incoming items by ID
+        const itemMap = {};
+        items.forEach(item => itemMap[`card_${item.id}`] = item);
         
-        // Restore expanded state
-        expandedIds.forEach(function(cardId) {
-            const card = document.getElementById(cardId);
-            if (card) card.classList.add('expanded');
-        });
+        // Get existing cards
+        const existingCards = container.querySelectorAll('.dl-card');
+        const existingIds = new Set();
         
-        // Restore checkbox state
-        checkedIds.forEach(function(id) {
-            const cb = container.querySelector('.dl-select-checkbox[data-id="' + id + '"]');
-            if (cb) {
-                cb.checked = true;
-                const card = cb.closest('.dl-card');
-                if (card) card.classList.add('selected');
+        // Update existing cards or mark for removal
+        existingCards.forEach(card => {
+            const cardId = card.id;
+            existingIds.add(cardId);
+            
+            if (itemMap[cardId]) {
+                // Card exists - do partial update (progress, speed, status only)
+                const item = itemMap[cardId];
+                updateCardInPlace(card, item);
+            } else {
+                // Card no longer in list - remove it
+                card.remove();
             }
         });
         
-        // Update selected count
-        updateSelectedCount();
+        // Add new cards that don't exist yet
+        items.forEach(item => {
+            const cardId = `card_${item.id}`;
+            if (!existingIds.has(cardId)) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = createDownloadCard(item);
+                const newCard = tempDiv.firstElementChild;
+                container.appendChild(newCard);
+            }
+        });
+        
+        // Reorder cards to match server order
+        items.forEach((item, index) => {
+            const card = document.getElementById(`card_${item.id}`);
+            if (card && card !== container.children[index]) {
+                container.insertBefore(card, container.children[index]);
+            }
+        });
+    }
+    
+    // In-place update without DOM replacement (preserves images)
+    function updateCardInPlace(card, item) {
+        const percent = (item.progress && !isNaN(item.progress)) ? item.progress : 0;
+        const status = item.status || 'pending';
+        const statusClass = `status-${status}`;
+        
+        // Update progress bar
+        const progressFill = card.querySelector('.dl-progress-fill');
+        if (progressFill) progressFill.style.width = `${percent}%`;
+        
+        // Update percentage text
+        const percentText = card.querySelector('.dl-percent-big');
+        if (percentText) percentText.innerHTML = `${percent}<small>%</small>`;
+        
+        // Update speed
+        const speedText = card.querySelector('.dl-speed-text');
+        if (speedText) speedText.textContent = item.speed || '';
+        
+        // Update status pill
+        const statusPill = card.querySelector('.dl-status-pill');
+        if (statusPill) {
+            statusPill.className = `dl-status-pill ${statusClass}`;
+            const statusTextNode = statusPill.childNodes[statusPill.childNodes.length - 1];
+            if (statusTextNode) {
+                statusTextNode.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            }
+        }
+        
+        // Update card background class
+        card.className = card.className.replace(/status-\w+/g, '').trim();
+        card.classList.add(statusClass);
+        if (card.classList.contains('expanded')) card.classList.add('expanded');
+        if (card.classList.contains('selected')) card.classList.add('selected');
+        
+        // Update title if changed
+        const titleEl = card.querySelector('.dl-filename');
+        const newTitle = item.title || item.filename || item.url || 'No Title';
+        if (titleEl && titleEl.textContent !== newTitle) {
+            titleEl.textContent = newTitle;
+            titleEl.title = newTitle;
+        }
+        
+        // Update thumbnail only if src changed
+        const thumbEl = card.querySelector('.dl-thumb');
+        if (thumbEl && item.thumbnail && thumbEl.src !== item.thumbnail) {
+            thumbEl.src = item.thumbnail;
+        }
     }
     
     function createDownloadCard(item) {
