@@ -394,14 +394,14 @@ class ModuleQueue(PluginModuleBase):
         if caller_plugin:
             cp_lower = caller_plugin.lower()
             if 'anilife' in cp_lower: return 'anilife'
-            if 'ohli24' in cp_lower or 'ani24' in cp_lower: return 'ani24'
+            if 'ohli24' in cp_lower or 'ani24' in cp_lower: return 'ohli24'
             if 'linkkf' in cp_lower: return 'linkkf'
             if 'youtube' in cp_lower: return 'youtube'
         
         # 2. 메타데이터 기반 판단
         if meta and meta.get('source'):
             ms_lower = meta.get('source').lower()
-            if ms_lower in ['ani24', 'ohli24']: return 'ani24'
+            if ms_lower in ['ani24', 'ohli24']: return 'ohli24'
             if ms_lower == 'anilife': return 'anilife'
             if ms_lower == 'linkkf': return 'linkkf'
 
@@ -409,7 +409,7 @@ class ModuleQueue(PluginModuleBase):
         if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
             return 'youtube'
         elif 'ani24' in url_lower or 'ohli24' in url_lower:
-            return 'ani24'
+            return 'ohli24'
         elif 'linkkf' in url_lower:
             return 'linkkf'
         elif 'anilife' in url_lower:

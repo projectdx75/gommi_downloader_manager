@@ -12,7 +12,7 @@ def get_downloader(source_type: str) -> Optional[BaseDownloader]:
         from .ytdlp_aria2 import YtdlpAria2Downloader
         return YtdlpAria2Downloader()
     
-    elif source_type in ('ani24', 'hls'):
+    elif source_type in ('ohli24', 'hls'):
         from .ffmpeg_hls import FfmpegHlsDownloader
         return FfmpegHlsDownloader()
     
