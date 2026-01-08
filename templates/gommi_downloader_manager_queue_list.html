@@ -226,6 +226,29 @@
         background: rgba(30, 41, 59, 0.85);
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
     }
+    
+    /* Card Status Background Colors */
+    .dl-card.status-completed {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(30, 41, 59, 0.95));
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+    .dl-card.status-error {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(30, 41, 59, 0.95));
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    .dl-card.status-cancelled {
+        background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(30, 41, 59, 0.95));
+        border-color: rgba(107, 114, 128, 0.3);
+        opacity: 0.7;
+    }
+    .dl-card.status-downloading {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(30, 41, 59, 0.95));
+        border-color: rgba(59, 130, 246, 0.25);
+    }
+    .dl-card.status-extracting {
+        background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(30, 41, 59, 0.95));
+        border-color: rgba(168, 85, 247, 0.25);
+    }
 
     /* ID & Meta Row */
     .dl-meta {
@@ -856,7 +879,7 @@
         const sourceStyle = sourceColors[source.toLowerCase()] || sourceColors['auto'];
         
         return `
-            <div class="dl-card" id="card_${item.id}" onclick="toggleCardDetail(this, event)">
+            <div class="dl-card ${statusClass}" id="card_${item.id}" onclick="toggleCardDetail(this, event)">
                 <div class="dl-card-header">
                     <div class="dl-header-left">
                         <input type="checkbox" class="dl-select-checkbox" data-id="${item.id}" onclick="event.stopPropagation(); updateSelectedCount();">
