@@ -5,13 +5,15 @@
   "description": "YouTube 영상을 GDM(gommi_downloader_manager)으로 전송하여 다운로드",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "contextMenus",
+    "notifications"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://youtu.be/*",
-    "http://localhost:*/*",
-    "http://127.0.0.1:*/*"
+    "http://*/*",
+    "https://*/*"
   ],
   "action": {
     "default_popup": "popup.html",

@@ -93,7 +93,7 @@ async function fetchVideoInfo() {
   
   try {
     const response = await fetch(
-      `${serverUrl}/gommi_downloader_manager/ajax/queue/youtube_formats?url=${encodeURIComponent(currentUrl)}`,
+      `${serverUrl}/gommi_downloader_manager/public/youtube/formats?url=${encodeURIComponent(currentUrl)}`,
       { method: 'GET' }
     );
     
@@ -166,7 +166,7 @@ async function startDownload() {
   
   try {
     const response = await fetch(
-      `${serverUrl}/gommi_downloader_manager/ajax/queue/youtube_add`,
+      `${serverUrl}/gommi_downloader_manager/public/youtube/add`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
