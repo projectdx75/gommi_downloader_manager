@@ -3,6 +3,14 @@
 FlaskFarm용 범용 다운로드 매니저 플러그인입니다.
 여러 다운로더 플러그인(YouTube, Anime 등)의 다운로드 요청을 통합 관리하고 큐(Queue)를 제공합니다.
 
+## v0.2.24 변경사항 (2026-01-08)
+- **Chrome 확장프로그램 추가**: YouTube에서 GDM으로 바로 다운로드 전송
+- **Public API 추가**: `/public/youtube/formats`, `/public/youtube/add` (로그인 불필요)
+- **진행률 표시 개선**: aria2c 다운로드 시 진행률 파싱 수정
+- **카드 상태별 색상**: 완료(초록), 에러(빨강), 다운로드 중(파랑) 배경 구분
+- **부분 DOM 업데이트**: 이미지 깜빡임 방지, 성능 최적화
+- **소스 타입 수정**: ani24 → ohli24로 통일
+
 ## v0.2.17 변경사항 (2026-01-08)
 - **yt-dlp HTTP 헤더 지원**: `options.headers` 딕셔너리에서 `--add-header` 인자를 생성하여 Referer/User-Agent 등 커스텀 헤더를 yt-dlp에 전달합니다.
 - **Linkkf CDN 리다이렉트 해결**: Referer 헤더 없이 m3u8 URL 접근 시 Google Cloud로 리다이렉트되던 문제 수정.
