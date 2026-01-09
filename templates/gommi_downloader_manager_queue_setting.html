@@ -196,6 +196,9 @@
     <div class="page-header">
         <h1 class="page-title">GDM Settings</h1>
         <div class="header-actions">
+            <button type="button" class="btn-premium" id="btn-self-update" style="background: var(--accent-secondary); border-color: var(--accent-secondary);">
+                <i class="fa fa-refresh"></i> Update
+            </button>
             <button type="button" class="btn-premium" id="globalSettingSaveBtn">
                 <i class="fa fa-save"></i> Save Changes
             </button>
@@ -314,6 +317,36 @@
                 } else {
                     $.notify('<strong>Save Failed: ' + ret.msg + '</strong>', {type:'danger'});
                 }
+            }
+        });
+    });
+
+    // Self Update
+    $("body").on('click', '#btn-self-update', function(e){
+        e.preventDefault();
+        if (!confirm('최신 코드를 다운로드하고 플러그인을 리로드하시겠습니까?')) return;
+        
+        var btn = $(this);
+        var originalText = btn.html();
+        btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> 업데이트 중...');
+        
+        $.ajax({
+            url: `/${package_name}/ajax/${sub}/self_update`,
+            type: "POST",
+            dataType: "json",
+            success: function(ret) {
+                if (ret.ret == 'success') {
+                    $.notify('<strong>업데이트 완료!</strong> 페이지를 새로고침합니다.', {type:'success'});
+                    setTimeout(function() { location.reload(); }, 1500);
+                } else {
+                    $.notify('<strong>업데이트 실패: ' + ret.msg + '</strong>', {type:'danger'});
+                }
+            },
+            error: function() {
+                $.notify('<strong>업데이트 중 오류 발생</strong>', {type:'danger'});
+            },
+            complete: function() {
+                btn.prop('disabled', false).html(originalText);
             }
         });
     });

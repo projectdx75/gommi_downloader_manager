@@ -47,6 +47,10 @@ class ModuleQueue(PluginModuleBase):
     _downloads: Dict[str, 'DownloadTask'] = {}
     _queue_lock = threading.Lock()
     
+    # 업데이트 체크 캐싱
+    _last_update_check = 0
+    _latest_version = None
+    
     def __init__(self, P: Any) -> None:
         from .setup import default_route_socketio_module
         super(ModuleQueue, self).__init__(P, name='queue', first_menu='list')
@@ -283,6 +287,39 @@ class ModuleQueue(PluginModuleBase):
                     self.P.logger.error(f'YouTube format extraction error: {e}')
                     ret['ret'] = 'error'
                     ret['msg'] = str(e)
+            
+            elif command == 'self_update':
+                # 자가 업데이트 (Git Pull) 및 모듈 리로드
+                try:
+                    import subprocess
+                    plugin_path = os.path.dirname(__file__)
+                    self.P.logger.info(f"GDM 자가 업데이트 시작: {plugin_path}")
+                    
+                    # 1. Git Pull
+                    cmd = ['git', '-C', plugin_path, 'pull']
+                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                    stdout, stderr = process.communicate()
+                    
+                    if process.returncode != 0:
+                        raise Exception(f"Git pull 실패: {stderr}")
+                    
+                    self.P.logger.info(f"Git pull 결과: {stdout}")
+                    
+                    # 2. 모듈 리로드 (Hot-Reload)
+                    self.reload_plugin()
+                    
+                    ret['msg'] = f"업데이트 및 리로드 완료!<br><pre>{stdout}</pre>"
+                    ret['data'] = stdout
+                except Exception as e:
+                    self.P.logger.error(f"GDM 자가 업데이트 중 오류: {str(e)}")
+                    self.P.logger.error(traceback.format_exc())
+                    ret['ret'] = 'danger'
+                    ret['msg'] = f"업데이트 실패: {str(e)}"
+            
+            elif command == 'check_update':
+                # 업데이트 확인
+                force = req.form.get('force') == 'true'
+                ret['data'] = self.get_update_info(force=force)
                     
         except Exception as e:
             self.P.logger.error(f'Exception:{str(e)}')
@@ -475,6 +512,96 @@ class ModuleQueue(PluginModuleBase):
         # 모든 다운로드 중지
         for task in self._downloads.values():
             task.cancel()
+
+    def get_update_info(self, force=False):
+        """GitHub에서 최신 버전 정보 가져오기 (캐싱 활용)"""
+        import requests
+        now = time.time()
+        
+        # 실제 로컬 파일에서 현재 버전 읽기
+        current_version = self.P.plugin_info.get('version', '0.0.0')
+        try:
+            info_path = os.path.join(os.path.dirname(__file__), 'info.yaml')
+            if os.path.exists(info_path):
+                import yaml
+                with open(info_path, 'r', encoding='utf-8') as f:
+                    local_info = yaml.safe_load(f)
+                    current_version = str(local_info.get('version', current_version))
+        except: pass
+
+        # 1시간마다 체크 (force=True면 즉시)
+        if not force and ModuleQueue._latest_version and (now - ModuleQueue._last_update_check < 3600):
+            return {
+                'current': current_version,
+                'latest': ModuleQueue._latest_version,
+                'has_update': self._is_newer(ModuleQueue._latest_version, current_version)
+            }
+            
+        try:
+            url = "https://raw.githubusercontent.com/projectdx75/gommi_downloader_manager/master/info.yaml"
+            res = requests.get(url, timeout=5)
+            if res.status_code == 200:
+                import yaml
+                data = yaml.safe_load(res.text)
+                ModuleQueue._latest_version = str(data.get('version', ''))
+                ModuleQueue._last_update_check = now
+                
+                return {
+                    'current': current_version,
+                    'latest': ModuleQueue._latest_version,
+                    'has_update': self._is_newer(ModuleQueue._latest_version, current_version)
+                }
+        except Exception as e:
+            self.P.logger.error(f"Update check failed: {e}")
+            
+        return {
+            'current': current_version,
+            'latest': ModuleQueue._latest_version or current_version,
+            'has_update': False
+        }
+
+    def _is_newer(self, latest, current):
+        """버전 비교 (0.7.8 vs 0.7.7)"""
+        if not latest or not current: return False
+        try:
+            l_parts = [int(p) for p in latest.split('.')]
+            c_parts = [int(p) for p in current.split('.')]
+            return l_parts > c_parts
+        except:
+            return latest != current
+
+    def reload_plugin(self):
+        """플러그인 모듈 핫 리로드"""
+        import sys
+        import importlib
+        
+        try:
+            package_name = self.P.package_name
+            self.P.logger.info(f"플러그인 리로드 시작: {package_name}")
+            
+            # 1. 관련 모듈 찾기 및 리로드
+            modules_to_reload = []
+            for module_name in list(sys.modules.keys()):
+                if module_name.startswith(package_name):
+                    modules_to_reload.append(module_name)
+            
+            # 의존성 역순으로 정렬 (깊은 모듈 먼저)
+            modules_to_reload.sort(key=lambda x: x.count('.'), reverse=True)
+            
+            for module_name in modules_to_reload:
+                try:
+                    module = sys.modules[module_name]
+                    importlib.reload(module)
+                    self.P.logger.debug(f"Reloaded: {module_name}")
+                except Exception as e:
+                    self.P.logger.warning(f"Failed to reload {module_name}: {e}")
+            
+            self.P.logger.info(f"플러그인 모듈 [{package_name}] 리로드 완료")
+            return True
+        except Exception as e:
+            self.P.logger.error(f"모듈 리로드 중 실패: {str(e)}")
+            self.P.logger.error(traceback.format_exc())
+            return False
 
 
 class DownloadTask:

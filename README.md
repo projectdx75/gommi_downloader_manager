@@ -3,6 +3,10 @@
 FlaskFarm용 범용 다운로드 매니저 플러그인입니다.
 여러 다운로더 플러그인(YouTube, Anime 등)의 다운로드 요청을 통합 관리하고 큐(Queue)를 제공합니다.
 
+## v0.2.27 변경사항 (2026-01-09)
+- **자가 업데이트 기능 추가**: 설정 페이지에서 "Update" 버튼 클릭으로 Git Pull 및 플러그인 핫 리로드 지원
+- **버전 체크 API**: GitHub에서 최신 버전 정보를 가져와 업데이트 알림 표시 (1시간 캐싱)
+
 ## v0.2.24 변경사항 (2026-01-08)
 - **Chrome 확장프로그램 추가**: YouTube에서 GDM으로 바로 다운로드 전송
 - **Public API 추가**: `/public/youtube/formats`, `/public/youtube/add` (로그인 불필요)
