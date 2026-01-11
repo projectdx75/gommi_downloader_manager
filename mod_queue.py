@@ -890,7 +890,19 @@ class DownloadTask:
                 else:
                     modules = []
 
+                # 모듈명 추출 (예: anime_downloader_linkkf -> linkkf)
+                target_module_name = None
+                if len(parts) > 1:
+                    target_module_name = parts[-1]
+
                 for module_name, module_instance in modules:
+                    # 모듈 인스턴스의 name 또는 변수명 확인
+                    instance_name = getattr(module_instance, 'name', module_name)
+                    
+                    # 대상 모듈명이 지정되어 있으면 일치하는 경우에만 호출
+                    if target_module_name and instance_name != target_module_name:
+                        continue
+                        
                     if hasattr(module_instance, 'plugin_callback'):
                         callback_data = {
                             'callback_id': self.callback_id,
@@ -901,8 +913,10 @@ class DownloadTask:
                         }
                         module_instance.plugin_callback(callback_data)
                         callback_invoked = True
-                        P.logger.info(f"Callback invoked on module {module_name}")
-                        break
+                        P.logger.info(f"Callback invoked on module {instance_name}")
+                        # 대상 모듈을 명확히 찾았으면 종료
+                        if target_module_name:
+                            break
                 
                 if not callback_invoked:
                     P.logger.debug(f"No plugin_callback method found in {self.caller_plugin}")
