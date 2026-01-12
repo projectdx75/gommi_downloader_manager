@@ -42,9 +42,9 @@ class YtdlpAria2Downloader(BaseDownloader):
             
             # 출력 템플릿
             if filename:
-                output_template = os.path.join(save_path, filename)
+                output_template = os.path.normpath(os.path.join(save_path, filename))
             else:
-                output_template = os.path.join(save_path, '%(title)s.%(ext)s')
+                output_template = os.path.normpath(os.path.join(save_path, '%(title)s.%(ext)s'))
             
             # yt-dlp 명령어 구성
             cmd = [
@@ -267,6 +267,15 @@ class YtdlpAria2Downloader(BaseDownloader):
             if self._process.returncode == 0:
                 if progress_callback:
                     progress_callback(100, '', '')
+                
+                # 자막 다운로드 처리
+                vtt_url = options.get('subtitles')
+                if vtt_url and final_filepath:
+                    try:
+                        self._download_subtitle(vtt_url, final_filepath, headers=options.get('headers'))
+                    except Exception as e:
+                        logger.error(f'[GDM] Subtitle download error: {e}')
+                
                 return {'success': True, 'filepath': final_filepath}
             else:
                 return {'success': False, 'error': f'Exit code: {self._process.returncode}'}
@@ -318,3 +327,57 @@ class YtdlpAria2Downloader(BaseDownloader):
             return result.returncode == 0
         except:
             return False
+
+    def _download_subtitle(self, vtt_url: str, output_path: str, headers: Optional[dict] = None):
+        """자막 다운로드 및 SRT 변환"""
+        try:
+            import requests
+            # 자막 파일 경로 생성 (비디오 파일명.srt)
+            video_basename = os.path.splitext(output_path)[0]
+            srt_path = video_basename + ".srt"
+            
+            logger.info(f"[GDM] Downloading subtitle from: {vtt_url}")
+            response = requests.get(vtt_url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                vtt_content = response.text
+                srt_content = self._vtt_to_srt(vtt_content)
+                with open(srt_path, "w", encoding="utf-8") as f:
+                    f.write(srt_content)
+                logger.info(f"[GDM] Subtitle saved to: {srt_path}")
+                return True
+        except Exception as e:
+            logger.error(f"[GDM] Failed to download subtitle: {e}")
+        return False
+
+    def _vtt_to_srt(self, vtt_content: str) -> str:
+        """VTT 형식을 SRT 형식으로 간단히 변환"""
+        if not vtt_content.startswith("WEBVTT"):
+            return vtt_content
+            
+        lines = vtt_content.split("\n")
+        srt_lines = []
+        cue_index = 1
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            if line.startswith("WEBVTT") or line.startswith("NOTE") or line.startswith("STYLE"):
+                i += 1
+                continue
+            if not line:
+                i += 1
+                continue
+            if "-->" in line:
+                # VTT 타임코드를 SRT 형식으로 변환 (. -> ,)
+                srt_timecode = line.replace(".", ",")
+                srt_lines.append(str(cue_index))
+                srt_lines.append(srt_timecode)
+                cue_index += 1
+                i += 1
+                while i < len(lines) and lines[i].strip():
+                    srt_lines.append(lines[i].rstrip())
+                    i += 1
+                srt_lines.append("")
+            else:
+                i += 1
+        return "\n".join(srt_lines)
