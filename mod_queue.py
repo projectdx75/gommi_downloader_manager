@@ -19,6 +19,7 @@ from framework import F, socketio
 class DownloadStatus(str, Enum):
     PENDING = "pending"
     EXTRACTING = "extracting"  # 메타데이터 추출 중
+    WAITING = "waiting"  # 동시 다운로드 슬롯 대기 중
     DOWNLOADING = "downloading"
     PAUSED = "paused"
     COMPLETED = "completed"
@@ -203,6 +204,33 @@ class ModuleQueue(PluginModuleBase):
                         self.P.logger.error(f'DB Delete Error: {e}')
                 
                 ret['msg'] = '항목이 삭제되었습니다.'
+
+            elif command == 'delete_completed':
+                # 완료된 항목 일괄 삭제 (메모리 + DB)
+                removed_memory = 0
+                with self._queue_lock:
+                    remove_ids = [
+                        task_id
+                        for task_id, task in self._downloads.items()
+                        if task.status == DownloadStatus.COMPLETED
+                    ]
+                    for task_id in remove_ids:
+                        del self._downloads[task_id]
+                    removed_memory = len(remove_ids)
+
+                removed_db = 0
+                try:
+                    from .model import ModelDownloadItem
+                    with F.app.app_context():
+                        removed_db = F.db.session.query(ModelDownloadItem).filter(
+                            ModelDownloadItem.status == DownloadStatus.COMPLETED
+                        ).delete(synchronize_session=False)
+                        F.db.session.commit()
+                except Exception as e:
+                    self.P.logger.error(f'DB Delete Completed Error: {e}')
+
+                ret['msg'] = f'완료 항목 삭제: 메모리 {removed_memory}개, DB {removed_db}개'
+                ret['data'] = {'memory': removed_memory, 'db': removed_db}
             
             # ===== YouTube API for Chrome Extension =====
             
@@ -747,6 +775,8 @@ class DownloadTask:
             ModuleQueue._ensure_concurrency_limit()
             sem = ModuleQueue._concurrency_sem
             if sem is not None:
+                self.status = DownloadStatus.WAITING
+                self._emit_status()
                 while not self._cancelled:
                     if sem.acquire(timeout=0.5):
                         slot_acquired = True

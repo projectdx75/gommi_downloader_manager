@@ -323,6 +323,10 @@
         background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(30, 41, 59, 0.95));
         border-color: rgba(168, 85, 247, 0.25);
     }
+    .dl-card.status-waiting {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(30, 41, 59, 0.95));
+        border-color: rgba(245, 158, 11, 0.28);
+    }
 
     /* ID & Meta Row */
     .dl-meta {
@@ -440,6 +444,9 @@
     
     .status-downloading { color: var(--accent-primary); }
     .status-downloading .status-dot { background-color: var(--accent-primary); box-shadow: 0 0 8px var(--accent-primary); animation: pulse 1.5s infinite; }
+
+    .status-waiting { color: var(--warning); }
+    .status-waiting .status-dot { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); animation: pulse 1.5s infinite; }
     
     .status-completed { color: var(--success); }
     .status-completed .status-dot { background-color: var(--success); }
@@ -658,6 +665,8 @@
     .dl-status-pill.status-pending .status-dot { background: var(--text-muted); opacity: 0.5; }
     .dl-status-pill.status-extracting { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
     .dl-status-pill.status-extracting .status-dot { background: #c084fc; animation: pulse 1s infinite; }
+    .dl-status-pill.status-waiting { background: rgba(240, 173, 78, 0.2); color: var(--warning); }
+    .dl-status-pill.status-waiting .status-dot { background: var(--warning); animation: pulse 1s infinite; }
     .dl-status-pill.status-error { background: rgba(217, 83, 79, 0.2); color: var(--danger); }
     .dl-status-pill.status-error .status-dot { background: var(--danger); }
     .dl-status-pill.status-cancelled { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
@@ -881,6 +890,9 @@
         <div class="header-actions">
             <button type="button" class="btn-premium" onclick="deleteSelected()" id="delete_selected_btn" style="display: none;">
                 <i class="fa fa-trash-o"></i> 선택삭제 (<span id="selected_count">0</span>)
+            </button>
+            <button type="button" class="btn-premium" onclick="deleteCompleted()">
+                <i class="fa fa-check"></i> 완료 삭제
             </button>
             <button type="button" class="btn-premium danger" onclick="resetList()">
                 <i class="fa fa-trash"></i> Reset All
@@ -1168,7 +1180,7 @@
                         <i class="fa fa-clock-o"></i> ${startTime !== '-' ? startTime.split(' ')[1] || startTime : '-'}
                     </div>
                     <div class="dl-actions">
-                        <button class="dl-btn cancel" title="취소" onclick="event.stopPropagation(); cancelDownload('${item.id}')" ${status === 'downloading' || status === 'pending' || status === 'paused' || status === 'extracting' ? '' : 'disabled'}>
+                        <button class="dl-btn cancel" title="취소" onclick="event.stopPropagation(); cancelDownload('${item.id}')" ${status === 'downloading' || status === 'pending' || status === 'paused' || status === 'extracting' || status === 'waiting' ? '' : 'disabled'}>
                             <i class="fa fa-stop"></i>
                         </button>
                         <button class="dl-btn delete" title="삭제" onclick="event.stopPropagation(); deleteDownload('${item.id}')">
@@ -1241,6 +1253,29 @@
                     $.notify('<strong>Queue Reset Successfully</strong>', {type: 'success'});
                 }
                 refreshList(true);
+            }
+        });
+    }
+
+    function deleteCompleted() {
+        if (!confirm('완료된 항목만 큐에서 삭제하시겠습니까?')) return;
+        $.ajax({
+            url: '/{{ arg["package_name"] }}/ajax/{{ arg["module_name"] }}/delete_completed',
+            type: 'POST',
+            data: {},
+            dataType: 'json',
+            success: function(ret) {
+                if (ret.ret === 'success') {
+                    const mem = ret.data?.memory ?? 0;
+                    const db = ret.data?.db ?? 0;
+                    $.notify(`<strong>완료 항목 삭제 완료 (메모리 ${mem}, DB ${db})</strong>`, {type: 'success'});
+                } else {
+                    $.notify('<strong>완료 항목 삭제 실패</strong>', {type: 'warning'});
+                }
+                refreshList(false);
+            },
+            error: function() {
+                $.notify('<strong>완료 항목 삭제 실패</strong>', {type: 'warning'});
             }
         });
     }
