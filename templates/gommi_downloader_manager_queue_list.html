@@ -46,7 +46,63 @@
         background-color: #3e5770 !important;
     }
 
-    #loading { display: none !important; }
+    /* Plugin-owned loading override (independent from Flaskfarm default loader assets) */
+    #loading,
+    #modal_loading {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 3000010 !important;
+        background: rgba(10, 22, 36, 0.46);
+        backdrop-filter: blur(2px);
+    }
+
+    #loading img,
+    #modal_loading img {
+        display: none !important;
+    }
+
+    #loading::before,
+    #modal_loading::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 58px;
+        height: 58px;
+        margin-left: -29px;
+        margin-top: -29px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.24);
+        border-top-color: var(--accent-primary);
+        border-right-color: var(--accent-secondary);
+        animation: gdm-loader-spin 0.9s linear infinite;
+    }
+
+    #loading::after,
+    #modal_loading::after {
+        content: "LOADING";
+        position: absolute;
+        left: 50%;
+        top: calc(50% + 44px);
+        transform: translateX(-50%);
+        color: var(--text-main);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+    }
+
+    #loading[style*="display: block"],
+    #loading[style*="display: inline-block"],
+    #modal_loading[style*="display: block"],
+    #modal_loading[style*="display: inline-block"] {
+        display: block !important;
+    }
+
+    @keyframes gdm-loader-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
 
     #gommi_download_manager_queue_list {
         font-family: var(--font-sans);
@@ -140,6 +196,24 @@
             flex: 1;
             text-align: center;
             padding: 0.6rem 0.5rem;
+        }
+    }
+
+    /* Mobile 5px Padding - Maximum Screen Usage */
+    @media (max-width: 768px) {
+        .container, .container-fluid, #main_container, #gommi_download_manager_queue_list {
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+        .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+        [class*="col-"] {
+            padding-left: 4px !important;
+            padding-right: 4px !important;
         }
     }
 

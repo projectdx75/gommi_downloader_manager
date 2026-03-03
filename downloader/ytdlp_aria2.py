@@ -40,12 +40,14 @@ class YtdlpAria2Downloader(BaseDownloader):
         try:
             os.makedirs(save_path, exist_ok=True)
             
-            # 출력 템플릿
-            if filename:
-                output_template = os.path.normpath(os.path.join(save_path, filename))
-            else:
-                output_template = os.path.normpath(os.path.join(save_path, '%(title)s.%(ext)s'))
+            # 출력 템플릿 (outtmpl 옵션 우선 처리)
+            raw_outtmpl = options.get('outtmpl') or filename or '%(title)s.%(ext)s'
             
+            # 경로와 템플릿 결합 후 정규화
+            output_template = os.path.abspath(os.path.join(save_path, raw_outtmpl))
+            # 윈도우/리눅스 구분 없이 중복 슬래시 제거 및 절대 경로 확보
+            output_template = os.path.normpath(output_template)
+
             # yt-dlp 명령어 구성
             cmd = [
                 'yt-dlp',
@@ -58,6 +60,10 @@ class YtdlpAria2Downloader(BaseDownloader):
             cmd.extend(['--print', 'before_dl:GDM_FIX:title:%(title)s'])
             cmd.extend(['--print', 'before_dl:GDM_FIX:thumb:%(thumbnail)s'])
             
+            # 속도 제한 설정
+            max_rate = P.ModelSetting.get('max_download_rate')
+            rate_limited = bool(max_rate and max_rate != '0')
+            
             # aria2c 사용 (설치되어 있으면)
             aria2c_path = options.get('aria2c_path', 'aria2c')
             connections = options.get('connections', 4)
@@ -65,21 +71,18 @@ class YtdlpAria2Downloader(BaseDownloader):
             if self._check_aria2c(aria2c_path):
                 cmd.extend(['--external-downloader', aria2c_path])
                 # aria2c 설정: -x=연결수, -s=분할수, -j=병렬, -k=조각크기, --console-log-level=notice로 진행률 출력
-                cmd.extend(['--external-downloader-args', f'aria2c:-x{connections} -s{connections} -j{connections} -k1M --summary-interval=1 --console-log-level=notice'])
+                aria2_args = f'aria2c:-x{connections} -s{connections} -j{connections} -k1M --summary-interval=1 --console-log-level=notice'
+                if rate_limited:
+                    aria2_args = f'{aria2_args} --max-download-limit={max_rate}'
+                cmd.extend(['--external-downloader-args', aria2_args])
                 logger.info(f'[GDM] Using aria2c for multi-threaded download (connections: {connections})')
             
             # 진행률 템플릿 추가 (yt-dlp native downloader)
             cmd.extend(['--progress-template', 'download:GDM_PROGRESS:%(progress._percent_str)s:%(progress._speed_str)s:%(progress._eta_str)s'])
             
-            # 속도 제한 설정
-            max_rate = P.ModelSetting.get('max_download_rate')
-            if max_rate == '0':
-                max_rate_arg = ''
-                log_rate_msg = '무제한'
-            else:
-                max_rate_arg = f'--max-download-limit={max_rate}'
-                log_rate_msg = max_rate
-                cmd.extend(['--limit-rate', max_rate]) # Native downloader limit
+            # yt-dlp native downloader 제한 (external-downloader 미사용/보조 경로)
+            if rate_limited:
+                cmd.extend(['--limit-rate', max_rate])
 
             # 포맷 선택
             format_spec = options.get('format')
@@ -147,14 +150,6 @@ class YtdlpAria2Downloader(BaseDownloader):
             if options.get('add_metadata'):
                 cmd.append('--add-metadata')
             
-            if options.get('outtmpl'):
-                 # outtmpl 옵션이 별도로 전달된 경우 덮어쓰기 (output_template는 -o가 이미 차지함)
-                 # 하지만 yt-dlp -o 옵션이 곧 outtmpl임.
-                 # 파일명 템플릿 문제 해결을 위해 filename 인자 대신 outtmpl 옵션을 우선시
-                 # 위에서 -o output_template를 이미 넣었으므로, 여기서 다시 넣으면 중복될 수 있음.
-                 # 따라서 로직 수정: filename 없이 outtmpl만 온 경우
-                 pass
-
             # URL 추가
             cmd.append(url)
             
@@ -314,7 +309,16 @@ class YtdlpAria2Downloader(BaseDownloader):
         """다운로드 취소"""
         super().cancel()
         if self._process:
-            self._process.terminate()
+            try:
+                # [FIX] 파이프 명시적으로 닫기
+                if self._process.stdout: self._process.stdout.close()
+                if self._process.stderr: self._process.stderr.close()
+                
+                self._process.terminate()
+                # 짧은 대기 후 여전히 살아있으면 kill
+                try: self._process.wait(timeout=1)
+                except: self._process.kill()
+            except: pass
     
     def _check_aria2c(self, aria2c_path: str) -> bool:
         """aria2c 설치 확인"""

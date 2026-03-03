@@ -38,7 +38,8 @@ class HttpDirectDownloader(BaseDownloader):
             if not filename:
                 filename = url.split('/')[-1].split('?')[0] or f"download_{int(__import__('time').time())}"
             
-            filepath = os.path.join(save_path, filename)
+            filepath = os.path.abspath(os.path.join(save_path, filename))
+            filepath = os.path.normpath(filepath)
             
             # 헤더 설정
             headers = options.get('headers', {})

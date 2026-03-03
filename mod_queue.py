@@ -297,13 +297,13 @@ class ModuleQueue(PluginModuleBase):
                     
                     # 1. Git Pull
                     cmd = ['git', '-C', plugin_path, 'pull']
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    stdout, stderr = process.communicate()
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                     
-                    if process.returncode != 0:
-                        raise Exception(f"Git pull 실패: {stderr}")
+                    if result.returncode != 0:
+                        raise Exception(f"Git pull 실패: {result.stderr}")
                     
-                    self.P.logger.info(f"Git pull 결과: {stdout}")
+                    self.P.logger.info(f"Git pull 결과: {result.stdout}")
+                    stdout = result.stdout
                     
                     # 2. 모듈 리로드 (Hot-Reload)
                     self.reload_plugin()

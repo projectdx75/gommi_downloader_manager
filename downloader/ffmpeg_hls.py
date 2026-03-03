@@ -42,7 +42,8 @@ class FfmpegHlsDownloader(BaseDownloader):
             if not filename:
                 filename = f"download_{int(__import__('time').time())}.mp4"
             
-            filepath = os.path.join(save_path, filename)
+            filepath = os.path.abspath(os.path.join(save_path, filename))
+            filepath = os.path.normpath(filepath)
             
             # ffmpeg 명령어 구성
             ffmpeg_path = options.get('ffmpeg_path', 'ffmpeg')
@@ -173,7 +174,16 @@ class FfmpegHlsDownloader(BaseDownloader):
         """다운로드 취소"""
         super().cancel()
         if self._process:
-            self._process.terminate()
+            try:
+                # [FIX] 파이프 명시적으로 닫기
+                if self._process.stdout: self._process.stdout.close()
+                if self._process.stderr: self._process.stderr.close()
+                
+                self._process.terminate()
+                # 짧은 대기 후 여전히 살아있으면 kill
+                try: self._process.wait(timeout=1)
+                except: self._process.kill()
+            except: pass
     
     def _get_duration(self, url: str, ffprobe_path: str, headers: Dict) -> float:
         """ffprobe로 영상 길이 획득"""

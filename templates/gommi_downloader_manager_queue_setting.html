@@ -23,6 +23,64 @@
         --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    /* Plugin-owned loading override (independent from Flaskfarm default loader assets) */
+    #loading,
+    #modal_loading {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 3000010 !important;
+        background: rgba(7, 16, 35, 0.46);
+        backdrop-filter: blur(2px);
+    }
+
+    #loading img,
+    #modal_loading img {
+        display: none !important;
+    }
+
+    #loading::before,
+    #modal_loading::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 58px;
+        height: 58px;
+        margin-left: -29px;
+        margin-top: -29px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.24);
+        border-top-color: var(--accent-primary);
+        border-right-color: var(--accent-secondary);
+        animation: gdm-loader-spin 0.9s linear infinite;
+    }
+
+    #loading::after,
+    #modal_loading::after {
+        content: "LOADING";
+        position: absolute;
+        left: 50%;
+        top: calc(50% + 44px);
+        transform: translateX(-50%);
+        color: var(--text-main);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+    }
+
+    #loading[style*="display: block"],
+    #loading[style*="display: inline-block"],
+    #modal_loading[style*="display: block"],
+    #modal_loading[style*="display: inline-block"] {
+        display: block !important;
+    }
+
+    @keyframes gdm-loader-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
     #gommi_download_manager_queue_setting {
         font-family: var(--font-sans);
         color: var(--text-main);
@@ -237,6 +295,10 @@
                             <option value="1M" {% if arg['max_download_rate'] == '1M' %}selected{% endif %}>1 MB/s</option>
                             <option value="3M" {% if arg['max_download_rate'] == '3M' %}selected{% endif %}>3 MB/s</option>
                             <option value="5M" {% if arg['max_download_rate'] == '5M' %}selected{% endif %}>5 MB/s</option>
+                            <option value="6M" {% if arg['max_download_rate'] == '6M' %}selected{% endif %}>6 MB/s</option>
+                            <option value="7M" {% if arg['max_download_rate'] == '7M' %}selected{% endif %}>7 MB/s</option>
+                            <option value="8M" {% if arg['max_download_rate'] == '8M' %}selected{% endif %}>8 MB/s</option>
+                            <option value="9M" {% if arg['max_download_rate'] == '9M' %}selected{% endif %}>9 MB/s</option>
                             <option value="10M" {% if arg['max_download_rate'] == '10M' %}selected{% endif %}>10 MB/s</option>
                         </select>
                     </div>
