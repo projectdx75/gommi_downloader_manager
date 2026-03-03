@@ -5,6 +5,8 @@ HTTP 직접 다운로더
 """
 import os
 import traceback
+import re
+import time
 from typing import Dict, Any, Optional, Callable
 
 from .base import BaseDownloader
@@ -19,6 +21,21 @@ except:
 
 class HttpDirectDownloader(BaseDownloader):
     """HTTP 직접 다운로더"""
+
+    @staticmethod
+    def _rate_to_bps(rate_value: Any) -> float:
+        if rate_value is None:
+            return 0.0
+        value = str(rate_value).strip().upper()
+        if not value or value in ('0', 'UNLIMITED'):
+            return 0.0
+        m = re.match(r'^(\d+(?:\.\d+)?)\s*([KMG])(?:I?B)?$', value)
+        if not m:
+            return 0.0
+        num = float(m.group(1))
+        unit = m.group(2)
+        mul = {'K': 1024, 'M': 1024 ** 2, 'G': 1024 ** 3}[unit]
+        return num * mul
     
     def download(
         self,
@@ -53,6 +70,9 @@ class HttpDirectDownloader(BaseDownloader):
             total_size = int(response.headers.get('content-length', 0))
             downloaded = 0
             chunk_size = 1024 * 1024  # 1MB 청크
+            max_rate = options.get('effective_max_download_rate') or options.get('max_download_rate')
+            rate_bps = self._rate_to_bps(max_rate)
+            start_time = time.monotonic()
             
             with open(filepath, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=chunk_size):
@@ -62,6 +82,13 @@ class HttpDirectDownloader(BaseDownloader):
                     if chunk:
                         f.write(chunk)
                         downloaded += len(chunk)
+
+                        # 평균 다운로드 속도를 제한(총량 제한 분배값 포함)
+                        if rate_bps > 0:
+                            elapsed = max(0.001, time.monotonic() - start_time)
+                            expected_elapsed = downloaded / rate_bps
+                            if expected_elapsed > elapsed:
+                                time.sleep(expected_elapsed - elapsed)
                         
                         if total_size > 0 and progress_callback:
                             progress = int(downloaded / total_size * 100)

@@ -26,6 +26,19 @@ class YtdlpAria2Downloader(BaseDownloader):
     def __init__(self):
         super().__init__()
         self._process: Optional[subprocess.Popen] = None
+
+    @staticmethod
+    def _normalize_rate(raw_rate: Any) -> str:
+        """속도 제한 문자열 정규화 (예: 6MB -> 6M, 0/None -> '')"""
+        if raw_rate is None:
+            return ''
+        value = str(raw_rate).strip().upper()
+        if not value or value in ('0', '0B', 'UNLIMITED'):
+            return ''
+        m = re.match(r'^(\d+(?:\.\d+)?)\s*([KMG])(?:I?B)?$', value)
+        if m:
+            return f'{m.group(1)}{m.group(2)}'
+        return value
     
     def download(
         self,
@@ -61,8 +74,12 @@ class YtdlpAria2Downloader(BaseDownloader):
             cmd.extend(['--print', 'before_dl:GDM_FIX:thumb:%(thumbnail)s'])
             
             # 속도 제한 설정
-            max_rate = P.ModelSetting.get('max_download_rate')
-            rate_limited = bool(max_rate and max_rate != '0')
+            max_rate = self._normalize_rate(
+                options.get('effective_max_download_rate')
+                or options.get('max_download_rate')
+                or P.ModelSetting.get('max_download_rate')
+            )
+            rate_limited = bool(max_rate)
             
             # aria2c 사용 (설치되어 있으면)
             aria2c_path = options.get('aria2c_path', 'aria2c')
@@ -83,6 +100,10 @@ class YtdlpAria2Downloader(BaseDownloader):
             # yt-dlp native downloader 제한 (external-downloader 미사용/보조 경로)
             if rate_limited:
                 cmd.extend(['--limit-rate', max_rate])
+                if options.get('is_global_rate_split'):
+                    logger.info(f'[GDM] global split limit enabled: {max_rate}/s per task')
+                else:
+                    logger.info(f'[GDM] download speed limit enabled: {max_rate}/s')
 
             # 포맷 선택
             format_spec = options.get('format')

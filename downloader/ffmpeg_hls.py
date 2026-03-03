@@ -47,6 +47,8 @@ class FfmpegHlsDownloader(BaseDownloader):
             
             # ffmpeg 명령어 구성
             ffmpeg_path = options.get('ffmpeg_path', 'ffmpeg')
+            if options.get('effective_max_download_rate') or options.get('max_download_rate'):
+                logger.warning('[GDM] ffmpeg_hls downloader does not support strict bandwidth cap; total limit may be approximate for HLS tasks.')
             
             cmd = [ffmpeg_path, '-y']
             
