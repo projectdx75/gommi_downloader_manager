@@ -25,6 +25,19 @@ class FfmpegHlsDownloader(BaseDownloader):
     def __init__(self):
         super().__init__()
         self._process: Optional[subprocess.Popen] = None
+
+    def _build_hls_input_args(self):
+        # Non-standard `.txt` manifests need the HLS demuxer selected before
+        # demuxer-private options such as `allowed_extensions` are applied.
+        return [
+            '-f', 'hls',
+            '-allowed_extensions', 'ALL',
+            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+            '-reconnect', '1',
+            '-reconnect_at_eof', '1',
+            '-reconnect_streamed', '1',
+            '-reconnect_delay_max', '5',
+        ]
     
     def download(
         self,
@@ -84,13 +97,7 @@ class FfmpegHlsDownloader(BaseDownloader):
                         logger.error(f"Failed to read cookies_file: {ce}")
 
             # 입력 전 설정 (Reconnection & Allowed extensions for non-standard m3u8 like .txt)
-            cmd.extend([
-                '-allowed_extensions', 'ALL',
-                '-reconnect', '1',
-                '-reconnect_at_eof', '1',
-                '-reconnect_streamed', '1',
-                '-reconnect_delay_max', '5'
-            ])
+            cmd.extend(self._build_hls_input_args())
 
             # 입력 URL
             cmd.extend(['-i', url])
@@ -190,9 +197,12 @@ class FfmpegHlsDownloader(BaseDownloader):
     def _get_duration(self, url: str, ffprobe_path: str, headers: Dict) -> float:
         """ffprobe로 영상 길이 획득"""
         try:
-            cmd = [ffprobe_path, '-v', 'error', '-allowed_extensions', 'ALL',
+            cmd = [ffprobe_path, '-v', 'error']
+            cmd.extend(self._build_hls_input_args())
+            cmd.extend([
                    '-show_entries', 'format=duration',
-                   '-of', 'default=noprint_wrappers=1:nokey=1']
+                   '-of', 'default=noprint_wrappers=1:nokey=1',
+            ])
             
             if headers:
                 header_str = '\r\n'.join([f'{k}: {v}' for k, v in headers.items()])
