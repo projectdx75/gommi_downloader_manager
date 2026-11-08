@@ -64,7 +64,11 @@ class HttpDirectDownloader(BaseDownloader):
                 headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             
             # 스트리밍 다운로드
-            response = requests.get(url, headers=headers, stream=True, timeout=60)
+            proxy = options.get('proxy')
+            request_options = {}
+            if proxy:
+                request_options['proxies'] = {'http': proxy, 'https': proxy}
+            response = requests.get(url, headers=headers, stream=True, timeout=60, **request_options)
             response.raise_for_status()
             
             total_size = int(response.headers.get('content-length', 0))

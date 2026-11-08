@@ -32,7 +32,7 @@ class FfmpegHlsDownloader(BaseDownloader):
         return [
             '-f', 'hls',
             '-allowed_extensions', 'ALL',
-            '-protocol_whitelist', 'file,http,https,tcp,tls,crypto',
+            '-protocol_whitelist', 'file,http,https,httpproxy,tcp,tls,crypto',
             '-reconnect', '1',
             '-reconnect_at_eof', '1',
             '-reconnect_streamed', '1',
@@ -64,6 +64,9 @@ class FfmpegHlsDownloader(BaseDownloader):
                 logger.warning('[GDM] ffmpeg_hls downloader does not support strict bandwidth cap; total limit may be approximate for HLS tasks.')
             
             cmd = [ffmpeg_path, '-y']
+            proxy = options.get('proxy')
+            if proxy:
+                cmd.extend(['-http_proxy', proxy])
             
             # 헤더 추가
             headers = options.get('headers', {})
@@ -113,7 +116,7 @@ class FfmpegHlsDownloader(BaseDownloader):
             logger.debug(f'ffmpeg 명령어: {" ".join(safe_cmd[:15])}...')
             
             # 먼저 duration 얻기 위해 ffprobe 실행
-            duration = self._get_duration(url, options.get('ffprobe_path', 'ffprobe'), headers)
+            duration = self._get_duration(url, options.get('ffprobe_path', 'ffprobe'), headers, proxy=proxy)
             
             # 프로세스 실행
             self._process = subprocess.Popen(
@@ -194,10 +197,12 @@ class FfmpegHlsDownloader(BaseDownloader):
                 except: self._process.kill()
             except: pass
     
-    def _get_duration(self, url: str, ffprobe_path: str, headers: Dict) -> float:
+    def _get_duration(self, url: str, ffprobe_path: str, headers: Dict, proxy: Optional[str] = None) -> float:
         """ffprobe로 영상 길이 획득"""
         try:
             cmd = [ffprobe_path, '-v', 'error']
+            if proxy:
+                cmd.extend(['-http_proxy', proxy])
             cmd.extend(self._build_hls_input_args())
             cmd.extend([
                    '-show_entries', 'format=duration',
