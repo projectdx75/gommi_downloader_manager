@@ -206,32 +206,10 @@ class ModuleQueue(PluginModuleBase):
                 ret['msg'] = '항목이 삭제되었습니다.'
 
             elif command == 'delete_completed':
-                # 완료된 항목 일괄 삭제 (메모리 + DB)
-                removed_memory = 0
-                with self._queue_lock:
-                    remove_ids = [
-                        task_id
-                        for task_id, task in self._downloads.items()
-                        if task.status == DownloadStatus.COMPLETED
-                    ]
-                    for task_id in remove_ids:
-                        del self._downloads[task_id]
-                    removed_memory = len(remove_ids)
+                counts = self.delete_completed_downloads()
+                ret['msg'] = f"완료 항목 삭제: 메모리 {counts['memory']}개, DB {counts['db']}개"
+                ret['data'] = counts
 
-                removed_db = 0
-                try:
-                    from .model import ModelDownloadItem
-                    with F.app.app_context():
-                        removed_db = F.db.session.query(ModelDownloadItem).filter(
-                            ModelDownloadItem.status == DownloadStatus.COMPLETED
-                        ).delete(synchronize_session=False)
-                        F.db.session.commit()
-                except Exception as e:
-                    self.P.logger.error(f'DB Delete Completed Error: {e}')
-
-                ret['msg'] = f'완료 항목 삭제: 메모리 {removed_memory}개, DB {removed_db}개'
-                ret['data'] = {'memory': removed_memory, 'db': removed_db}
-            
             # ===== YouTube API for Chrome Extension =====
             
             elif command == 'youtube_add':
@@ -479,6 +457,33 @@ class ModuleQueue(PluginModuleBase):
         """모든 다운로드 태스크 조회"""
         return list(cls._downloads.values())
     
+    @classmethod
+    def delete_completed_downloads(cls, caller_plugin: Optional[str] = None) -> Dict[str, int]:
+        """Remove completed queue records, optionally limited to a caller plugin."""
+        from .model import ModelDownloadItem
+
+        with cls._queue_lock:
+            remove_ids = [
+                task_id for task_id, task in cls._downloads.items()
+                if task.status == DownloadStatus.COMPLETED
+                and (caller_plugin is None or task.caller_plugin == caller_plugin)
+            ]
+            with F.app.app_context():
+                try:
+                    query = F.db.session.query(ModelDownloadItem).filter(
+                        ModelDownloadItem.status == DownloadStatus.COMPLETED
+                    )
+                    if caller_plugin is not None:
+                        query = query.filter(ModelDownloadItem.caller_plugin == caller_plugin)
+                    removed_db = query.delete(synchronize_session=False)
+                    F.db.session.commit()
+                except Exception:
+                    F.db.session.rollback()
+                    raise
+            for task_id in remove_ids:
+                del cls._downloads[task_id]
+        return {"memory": len(remove_ids), "db": removed_db}
+
     @classmethod
     def _detect_source_type(cls, url: str, caller_plugin: Optional[str] = None, meta: Optional[Dict] = None) -> str:
         """URL 및 호출자 정보를 기반으로 지능적 소스 타입 감지"""
